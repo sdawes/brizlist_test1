@@ -6,9 +6,13 @@
 //
 
 import SwiftUI
+import Firebase
 
 @main
-struct brizlist_test1App: App {
+struct BrizlistApp: App {
+    // This connects your AppDelegate to the SwiftUI lifecycle
+    @UIApplicationDelegateAdaptor private var appDelegate: AppDelegate
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
