@@ -13,108 +13,81 @@ struct ListingStyling {
     // MARK: - Category Styling
     
     static func categoryTextView(_ category: String) -> some View {
-        let color: Color
-        
-        // Determine color based on category
-        switch category.lowercased() {
-        case "restaurant":
-            color = .orange
-        case "pub":
-            color = .brown
-        case "coffee shop":
-            color = .blue
-        case "bar":
-            color = .purple
-        default:
-            color = .gray
-        }
-        
-        // Return the styled text view with tag icon
-        return HStack(spacing: 4) {
-            Image(systemName: "tag.fill")
-                .font(.caption)
-            
-            Text(category)
-                .font(.caption)
-        }
-        .foregroundColor(.white)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(color)
-        .cornerRadius(6)
+        Text(category.lowercased())
+            .font(.caption)
+            .foregroundColor(.black)
     }
     
-    
+
     // MARK: - Type Styling
     
     static func typeTextView(_ type: String) -> some View {
-        let color: Color
-        
-        // Determine color based on type
-        switch type.lowercased() {
-        case "fine dining":
-            color = .red
-        case "gastro":
-            color = .green
-        case "casual":
-            color = .blue
-        default:
-            color = .gray
-        }
-        
-        // Return the styled text view
-        return Text(type)
+        Text(type.lowercased())
             .font(.caption)
-            .foregroundColor(.white)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(color)
-            .cornerRadius(6)
+            .foregroundColor(.black)
     }
+    
 
     // MARK: - Location Styling
     
     static func locationTextView(_ location: String) -> some View {
-        Text(location)
+        Text(location.lowercased())
             .font(.caption)
-            .foregroundColor(.white)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(Color.teal)
-            .cornerRadius(6)
+            .foregroundColor(.black)
     }
 
 
-    // Single function that handles all location styling
-    static func categoryLocationView(_ location: String) -> some View {
-        let color: Color
-        
-        // Determine color based on location
-        switch location.lowercased() {
-        case "clifton":
-            color = .orange
-        case "redcliffe":
-            color = .brown
-        case "bedminster":
-            color = .blue
-        case "city centre":
-            color = .purple
-        default:
-            color = .gray
-        }
-        
-        // Return the styled text view with pin icon
-        return HStack(spacing: 4) {
-            Image(systemName: "mappin.circle.fill")
+    // MARK: - BrizPick Styling
+    
+    static func brizPickBadge() -> some View {
+        HStack(spacing: 4) {
+            // Enhanced rainbow gradient star
+            Image(systemName: "star.fill")
                 .font(.caption)
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [.red, .orange, .yellow, .green, .blue, .purple, .pink],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
             
-            Text(location)
+            // Briz Pick text in black
+            Text("Briz Pick")
                 .font(.caption)
+                .fontWeight(.bold)
+                .foregroundColor(.black)
         }
-        .foregroundColor(.white)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(color)
-        .cornerRadius(6)
     }
+
+    // MARK: - BrizPick Star Styling
+    
+    static func brizPickStar() -> some View {
+        Image(systemName: "star.fill")
+            .font(.caption)
+            .foregroundColor(.black)
+    }
+
+    // MARK: - Amenity Symbols
+    
+    static func veganSymbol() -> some View {
+        Image(systemName: "carrot.fill")
+            .font(.caption)
+    }
+    
+    static func vegSymbol() -> some View {
+        Image(systemName: "leaf.fill")
+            .font(.caption)
+    }
+    
+    static func dogSymbol() -> some View {
+        Image(systemName: "pawprint.fill")
+            .font(.caption)
+    }
+    
+    static func childSymbol() -> some View {
+        Image(systemName: "figure.2.and.child.holdinghands")
+            .font(.caption)
+    }
+
 }

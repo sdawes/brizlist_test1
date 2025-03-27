@@ -16,9 +16,14 @@ struct Listing: Identifiable, Codable {
     var type: String
     var location: String
     var imageURL: String? // Optional because not all listings need images
+    var isBrizPick: Bool?
+    var isVegan: Bool?
+    var isVeg: Bool?
+    var isDog: Bool?
+    var isChild: Bool?
     
     // Updated initializer with consistent required/optional parameters
-    init(id: String? = nil, name: String, category: String, description: String, type: String, location: String, imageURL: String? = nil) {
+    init(id: String? = nil, name: String, category: String, description: String, type: String, location: String, imageURL: String? = nil, isBrizPick: Bool? = nil, isVegan: Bool? = nil, isVeg: Bool? = nil, isDog: Bool? = nil, isChild: Bool? = nil) {
         self.id = id
         self.name = name
         self.category = category
@@ -26,5 +31,10 @@ struct Listing: Identifiable, Codable {
         self.type = type
         self.location = location
         self.imageURL = imageURL
+        self.isBrizPick = isBrizPick
+        self.isVegan = isVegan
+        self.isVeg = isVeg
+        self.isDog = isDog
+        self.isChild = isChild
     }
 }

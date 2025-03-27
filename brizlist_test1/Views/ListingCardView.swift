@@ -19,43 +19,73 @@ struct ListingCardView: View {
         }) {
             // Simple white card
             VStack(alignment: .leading, spacing: 8) {
-                // Name and category
                 HStack {
-                    // Name
                     Text(listing.name)
                         .font(.headline)
-                        .foregroundColor(.primary)
-
-                    Spacer ()
-
-                    // Location
-                    ListingStyling.categoryLocationView(listing.location)
-
-                    // Category
-                    ListingStyling.categoryTextView(listing.category)
+                        .foregroundColor(.black)
+                    
+                    Spacer()
+                    
+                    // Amenity symbols
+                    HStack(spacing: 4) {
+                        if listing.isVegan ?? false {
+                            ListingStyling.veganSymbol()
+                                .foregroundColor(.black) 
+                        }
+                        if listing.isVeg ?? false {
+                            ListingStyling.vegSymbol()
+                                .foregroundColor(.black)
+                        }
+                        if listing.isDog ?? false {
+                            ListingStyling.dogSymbol()
+                                .foregroundColor(.black)
+                        }
+                        if listing.isChild ?? false {
+                            ListingStyling.childSymbol()
+                                .foregroundColor(.black)
+                        }
+                        
+                        if listing.isBrizPick ?? false {
+                            ListingStyling.brizPickStar()
+                        }
+                    }
                 }
-
+                
                 // Divider line
                 Divider()
                     .padding(.top, 2)
                     .padding(.bottom, 4)
 
-                // Description
+                // Add description back
                 if !listing.description.isEmpty {
                     Text(listing.description)
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .lineLimit(2)
                 }
+
+            
                 
                 Spacer()
                 
                 // Footer with rating, type and edit button
                 HStack {
                     
-                    // Type
-                    ListingStyling.typeTextView(listing.type)
+                // Category
+                ListingStyling.categoryTextView(listing.category)
                     
+                    Text("•")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                    
+                    ListingStyling.locationTextView(listing.location)
+                    
+                    Text("•")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                    
+                    ListingStyling.typeTextView(listing.type)
+
                     Spacer()
                     
                     // Edit button

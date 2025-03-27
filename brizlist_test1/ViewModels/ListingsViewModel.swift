@@ -78,6 +78,11 @@ class ListingsViewModel: ObservableObject {
                     
                     // imageURL remains optional
                     let imageURL = data["imageURL"] as? String
+                    let isBrizPick = data["isBrizPick"] as? Bool
+                    let isVegan = data["isVegan"] as? Bool
+                    let isVeg = data["isVeg"] as? Bool
+                    let isDog = data["isDog"] as? Bool
+                    let isChild = data["isChild"] as? Bool
                     
                     return Listing(
                         id: id,
@@ -86,7 +91,12 @@ class ListingsViewModel: ObservableObject {
                         description: description,
                         type: type,
                         location: location,
-                        imageURL: imageURL
+                        imageURL: imageURL,
+                        isBrizPick: isBrizPick,
+                        isVegan: isVegan,
+                        isVeg: isVeg,
+                        isDog: isDog,
+                        isChild: isChild
                     )
                 }
             }
@@ -149,6 +159,11 @@ class ListingsViewModel: ObservableObject {
                     }
                     
                     let imageURL = data["imageURL"] as? String
+                    let isBrizPick = data["isBrizPick"] as? Bool
+                    let isVegan = data["isVegan"] as? Bool
+                    let isVeg = data["isVeg"] as? Bool
+                    let isDog = data["isDog"] as? Bool
+                    let isChild = data["isChild"] as? Bool
                     
                     return Listing(
                         id: id,
@@ -157,7 +172,12 @@ class ListingsViewModel: ObservableObject {
                         description: description,
                         type: type,
                         location: location,
-                        imageURL: imageURL
+                        imageURL: imageURL,
+                        isBrizPick: isBrizPick,
+                        isVegan: isVegan,
+                        isVeg: isVeg,
+                        isDog: isDog,
+                        isChild: isChild
                     )
                 }
                 
@@ -168,7 +188,33 @@ class ListingsViewModel: ObservableObject {
 
     // Add Listings
     
-    func addListing(name: String, category: String, description: String, type: String, location: String) {
+    func addListing(name: String, 
+                    category: String, 
+                    description: String, 
+                    type: String, 
+                    location: String, 
+                    isBrizPick: Bool? = nil,
+                    isVegan: Bool? = nil,
+                    isVeg: Bool? = nil,
+                    isDog: Bool? = nil,
+                    isChild: Bool? = nil) {
+        
+        // Create data dictionary
+        var data: [String: Any] = [
+            "name": name,
+            "category": category,
+            "description": description,
+            "type": type,
+            "location": location
+        ]
+        
+        // Add optional fields if they exist
+        if let isBrizPick = isBrizPick { data["isBrizPick"] = isBrizPick }
+        if let isVegan = isVegan { data["isVegan"] = isVegan }
+        if let isVeg = isVeg { data["isVeg"] = isVeg }
+        if let isDog = isDog { data["isDog"] = isDog }
+        if let isChild = isChild { data["isChild"] = isChild }
+        
         // Create a new listing with the provided data
         let newListingRef = db.collection("listings").document()
         let newListingId = newListingRef.documentID
@@ -179,17 +225,13 @@ class ListingsViewModel: ObservableObject {
             category: category,
             description: description,
             type: type,
-            location: location
+            location: location,
+            isBrizPick: isBrizPick,
+            isVegan: isVegan,
+            isVeg: isVeg,
+            isDog: isDog,
+            isChild: isChild
         )
-        
-        // Manual encoding
-        let data: [String: Any] = [
-            "name": newListing.name,
-            "category": newListing.category,
-            "description": newListing.description,
-            "type": newListing.type,
-            "location": newListing.location
-        ]
         
         // Add to Firestore
         newListingRef.setData(data) { [weak self] error in
@@ -211,14 +253,19 @@ class ListingsViewModel: ObservableObject {
             return
         }
         
-        // Manual encoding
-        let data: [String: Any] = [
+        var data: [String: Any] = [
             "name": listing.name,
             "category": listing.category,
             "description": listing.description,
             "type": listing.type,
             "location": listing.location
         ]
+        
+        if let isBrizPick = listing.isBrizPick { data["isBrizPick"] = isBrizPick }
+        if let isVegan = listing.isVegan { data["isVegan"] = isVegan }
+        if let isVeg = listing.isVeg { data["isVeg"] = isVeg }
+        if let isDog = listing.isDog { data["isDog"] = isDog }
+        if let isChild = listing.isChild { data["isChild"] = isChild }
         
         db.collection("listings").document(id).updateData(data) { [weak self] error in
             guard let self = self else { return }
