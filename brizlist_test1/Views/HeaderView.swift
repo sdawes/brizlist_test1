@@ -9,32 +9,49 @@ import Foundation
 import SwiftUI
 
 struct HeaderView: View {
+    @State private var showingFilterSheet = false
+
     var body: some View {
         VStack(spacing: 0) {
             // Background color for status bar area
-            Color(.systemGray6)  // Light gray color that matches scroll areas
+            Color(.systemGray6)
                 .frame(height: 0)
                 .ignoresSafeArea(edges: .top)
             
-            // Header content
+            // Main header content
             HStack {
                 Text("Brizlist")
                     .font(.headline)
                     .fontWeight(.bold)
-                
+
                 Spacer()
-                
-                // Optional header actions can be added here
+
+                // Filter button
+                Button(action: {
+                    showingFilterSheet = true
+                }) {
+                    Image(systemName: "line.3.horizontal.decrease.circle")
+                        .font(.headline)
+                        .foregroundColor(.black)
+                }
+
+                Image(systemName: "questionmark.circle")
+                    .font(.headline)
+                    .foregroundColor(.black)
             }
             .padding(.horizontal)
             .padding(.vertical, 12)
-            .background(Color(.systemGray6))  // Same light gray color
-            
+            .background(Color(.systemGray6))
+
             // Bottom border line
             Rectangle()
                 .fill(Color.gray.opacity(0.3))
                 .frame(height: 1)
         }
+        .sheet(isPresented: $showingFilterSheet, content: {
+            FilterSheetView()
+            .presentationDetents([.medium])
+        })
     }
 }
 
