@@ -119,6 +119,7 @@ struct ListingCardView: View {
             NavigationView {
                 ListingDetailView(listing: listing)
             }
+            .presentationDragIndicator(.visible)
         }
     }
 }
