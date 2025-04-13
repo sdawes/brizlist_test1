@@ -14,7 +14,6 @@ struct Listing: Identifiable, Codable {
     var category: String
     var description: String
     var location: String
-    var imageURL: String? // Optional because not all listings need images
     var isBrizPick: Bool?
     var isVegan: Bool?
     var isVeg: Bool?
@@ -22,13 +21,12 @@ struct Listing: Identifiable, Codable {
     var isChild: Bool?
     
     // Updated initializer with consistent required/optional parameters
-    init(id: String? = nil, name: String, category: String, description: String, location: String, imageURL: String? = nil, isBrizPick: Bool? = nil, isVegan: Bool? = nil, isVeg: Bool? = nil, isDog: Bool? = nil, isChild: Bool? = nil) {
+    init(id: String? = nil, name: String, category: String, description: String, location: String, isBrizPick: Bool? = nil, isVegan: Bool? = nil, isVeg: Bool? = nil, isDog: Bool? = nil, isChild: Bool? = nil) {
         self.id = id
         self.name = name
         self.category = category
         self.description = description
         self.location = location
-        self.imageURL = imageURL
         self.isBrizPick = isBrizPick
         self.isVegan = isVegan
         self.isVeg = isVeg

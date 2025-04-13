@@ -9,262 +9,146 @@ import Foundation
 import FirebaseFirestore
 import SwiftUI
 
+/// ViewModel responsible for managing Listing data and Firestore interactions
 class ListingsViewModel: ObservableObject {
-    // Published properties for UI
-    @Published var listings: [Listing] = []
-    @Published var isLoadingMoreListings: Bool = false
-    @Published var hasMoreListings: Bool = true
-    
-    // Error handling
+    // MARK: - Properties
+    @Published private(set) var listings: [Listing] = []
+    @Published private(set) var isLoadingMore = false
+    @Published private(set) var hasMoreListings = true
     @Published var errorMessage: String?
     @Published var showError: Bool = false
     
-    // Private Firestore properties
     private let db = Firestore.firestore()
-    private let pageSize = 10
+    private let pageSize = 20
     private var lastDocument: DocumentSnapshot?
+    private var listener: ListenerRegistration?
     
-    // Get Listings
+    init() {
+        listenForListings()
+    }
     
-    func fetchListings() {
+    deinit {
+        listener?.remove()
+    }
+    
+    // MARK: - Public Methods
+    public func fetchListings() {
+        resetPaginationState()
+        fetchData(query: createBaseQuery(), isInitialFetch: true)
+    }
+    
+    public func loadMoreListings() {
+        guard canLoadMore, let lastDoc = lastDocument else { return }
+        isLoadingMore = true
+        
+        let query = db.collection("listings")
+            .order(by: "name")
+            .start(afterDocument: lastDoc)
+            .limit(to: pageSize)
+            
+        fetchData(query: query, isInitialFetch: false)
+    }
+    
+    func addListing(_ listing: Listing) {
+        db.collection("listings").document().setData(
+            createListingData(from: listing)
+        ) { [weak self] error in
+            self?.handleFirestoreError(error, message: "Error adding listing")
+        }
+    }
+    
+    func updateListing(_ listing: Listing) {
+        guard let id = listing.id else {
+            handleFirestoreError(NSError(domain: "", code: -1), message: "Missing listing ID")
+            return
+        }
+        
+        db.collection("listings").document(id).updateData(
+            createListingData(from: listing)
+        ) { [weak self] error in
+            self?.handleFirestoreError(error, message: "Error updating listing")
+        }
+    }
+    
+    func deleteListing(_ listing: Listing) {
+        guard let id = listing.id else {
+            handleFirestoreError(NSError(domain: "", code: -1), message: "Missing listing ID")
+            return
+        }
+        
+        db.collection("listings").document(id).delete { [weak self] error in
+            self?.handleFirestoreError(error, message: "Error deleting listing")
+        }
+    }
+    
+    // MARK: - Private Helpers
+    private var canLoadMore: Bool {
+        !isLoadingMore && hasMoreListings && lastDocument != nil
+    }
+    
+    private func createBaseQuery() -> Query {
+        db.collection("listings")
+          .order(by: "name")
+          .limit(to: pageSize)
+    }
+    
+    private func resetPaginationState() {
         listings = []
         lastDocument = nil
         hasMoreListings = true
-        
-        db.collection("listings")
-            .order(by: "name")
-            .limit(to: pageSize)
-            .addSnapshotListener { [weak self] snapshot, error in
-                guard let self = self else { return }
-                
-                if let error = error {
-                    self.handleError(error, message: "Error fetching listings")
-                    return
-                }
-                
-                guard let documents = snapshot?.documents else {
-                    self.listings = []
-                    self.hasMoreListings = false
-                    return
-                }
-                
-                self.lastDocument = documents.last
-                self.hasMoreListings = documents.count >= self.pageSize
-                self.listings = documents.compactMap(self.createListing)
-            }
     }
-
-    func loadMoreListings() {
-        // If we're already loading or there are no more listings, return
-        if isLoadingMoreListings || !hasMoreListings || lastDocument == nil {
-            return
-        }
-        
-        isLoadingMoreListings = true
-        
-        // Create query for next batch
-        db.collection("listings")
-            .order(by: "name")
-            .limit(to: pageSize)
-            .start(afterDocument: lastDocument!)
-            .getDocuments { [weak self] snapshot, error in
-                guard let self = self else { return }
-                
-                self.isLoadingMoreListings = false
-                
-                if let error = error {
-                    self.errorMessage = "Error loading more listings: \(error.localizedDescription)"
-                    self.showError = true
-                    print("❌ Error loading more listings: \(error)")
-                    return
-                }
-                
-                guard let documents = snapshot?.documents, !documents.isEmpty else {
-                    // No more documents to load
-                    self.hasMoreListings = false
-                    return
-                }
-                
-                // Save the last document for pagination
-                self.lastDocument = documents.last
-                
-                // Check if we've reached the end
-                if documents.count < self.pageSize {
-                    self.hasMoreListings = false
-                }
-                
-                // Manual decoding
-                let newListings = documents.compactMap { document -> Listing? in
-                    let data = document.data()
-                    let id = document.documentID
-                    
-                    // Check if all required fields exist
-                    guard 
-                        let name = data["name"] as? String,
-                        let category = data["category"] as? String,
-                        let description = data["description"] as? String,
-                        let location = data["location"] as? String
-                    else {
-                        print("❌ Skipping document \(id) due to missing required fields")
-                        return nil
-                    }
-                    
-                    let imageURL = data["imageURL"] as? String
-                    let isBrizPick = data["isBrizPick"] as? Bool
-                    let isVegan = data["isVegan"] as? Bool
-                    let isVeg = data["isVeg"] as? Bool
-                    let isDog = data["isDog"] as? Bool
-                    let isChild = data["isChild"] as? Bool
-                    
-                    return Listing(
-                        id: id,
-                        name: name,
-                        category: category,
-                        description: description,
-                        location: location,
-                        imageURL: imageURL,
-                        isBrizPick: isBrizPick,
-                        isVegan: isVegan,
-                        isVeg: isVeg,
-                        isDog: isDog,
-                        isChild: isChild
-                    )
-                }
-                
-                // Append new listings to existing ones
-                self.listings.append(contentsOf: newListings)
-            }
-    }
-
-    // Add Listings
     
-    func addListing(name: String, 
-                    category: String, 
-                    description: String, 
-                    location: String, 
-                    isBrizPick: Bool? = nil,
-                    isVegan: Bool? = nil,
-                    isVeg: Bool? = nil,
-                    isDog: Bool? = nil,
-                    isChild: Bool? = nil) {
+    private func listenForListings() {
+        listener = createBaseQuery().addSnapshotListener { [weak self] snapshot, error in
+            self?.processQueryResults(snapshot: snapshot, error: error, isInitialFetch: true)
+        }
+    }
+    
+    private func fetchData(query: Query, isInitialFetch: Bool) {
+        isLoadingMore = !isInitialFetch
         
-        // Create data dictionary
-        var data: [String: Any] = [
-            "name": name,
-            "category": category,
-            "description": description,
-            "location": location
-        ]
-        
-        // Add optional fields if they exist
-        if let isBrizPick = isBrizPick { data["isBrizPick"] = isBrizPick }
-        if let isVegan = isVegan { data["isVegan"] = isVegan }
-        if let isVeg = isVeg { data["isVeg"] = isVeg }
-        if let isDog = isDog { data["isDog"] = isDog }
-        if let isChild = isChild { data["isChild"] = isChild }
-        
-        // Create a new listing with the provided data
-        let newListingRef = db.collection("listings").document()
-        let newListingId = newListingRef.documentID
-        
-        let newListing = Listing(
-            id: newListingId,
-            name: name,
-            category: category,
-            description: description,
-            location: location,
-            isBrizPick: isBrizPick,
-            isVegan: isVegan,
-            isVeg: isVeg,
-            isDog: isDog,
-            isChild: isChild
-        )
-        
-        // Add to Firestore
-        newListingRef.setData(data) { [weak self] error in
+        query.getDocuments { [weak self] snapshot, error in
             guard let self = self else { return }
-            if let error = error {
-                self.errorMessage = "Error adding listing: \(error.localizedDescription)"
-                self.showError = true
-                print("❌ Error adding listing: \(error)")
-            }
+            defer { self.isLoadingMore = false }
+            
+            self.processQueryResults(snapshot: snapshot, error: error, isInitialFetch: isInitialFetch)
         }
     }
-
-    // Update Listings
     
-    func updateListing(listing: Listing) {
-        guard let id = listing.id else {
-            errorMessage = "Error updating listing: Missing ID"
-            showError = true
+    private func processQueryResults(snapshot: QuerySnapshot?, error: Error?, isInitialFetch: Bool) {
+        if let error = error {
+            handleFirestoreError(error, message: "Error fetching listings")
             return
         }
         
-        var data: [String: Any] = [
-            "name": listing.name,
-            "category": listing.category,
-            "description": listing.description,
-            "location": listing.location
-        ]
-        
-        if let isBrizPick = listing.isBrizPick { data["isBrizPick"] = isBrizPick }
-        if let isVegan = listing.isVegan { data["isVegan"] = isVegan }
-        if let isVeg = listing.isVeg { data["isVeg"] = isVeg }
-        if let isDog = listing.isDog { data["isDog"] = isDog }
-        if let isChild = listing.isChild { data["isChild"] = isChild }
-        
-        db.collection("listings").document(id).updateData(data) { [weak self] error in
-            guard let self = self else { return }
-            if let error = error {
-                self.errorMessage = "Error updating listing: \(error.localizedDescription)"
-                self.showError = true
-                print("❌ Error updating listing: \(error)")
+        guard let documents = snapshot?.documents, !documents.isEmpty else {
+            hasMoreListings = false
+            if isInitialFetch {
+                listings = []
             }
-        }
-    }
-
-    // Delete Listings
-    
-    func deleteListing(listing: Listing) {
-        // Safely unwrap the optional id
-        guard let documentId = listing.id else {
-            self.errorMessage = "Error deleting listing: Missing document ID"
-            self.showError = true
-            print("❌ Error deleting listing: Missing document ID")
             return
         }
         
-        db.collection("listings").document(documentId).delete { error in
-            if let error = error {
-                self.errorMessage = "Error deleting listing: \(error.localizedDescription)"
-                self.showError = true
-                print("❌ Error deleting listing: \(error)")
-            }
+        lastDocument = documents.last
+        hasMoreListings = documents.count >= pageSize
+        
+        let newListings = documents.compactMap(createListingFromDocument)
+        
+        if isInitialFetch {
+            listings = newListings
+        } else {
+            listings.append(contentsOf: newListings)
         }
     }
-
-    private func createListing(from document: QueryDocumentSnapshot) -> Listing? {
+    
+    private func createListingFromDocument(_ document: QueryDocumentSnapshot) -> Listing? {
         let data = document.data()
-        let id = document.documentID
-        
-        // Check if all required fields exist
-        guard 
-            let name = data["name"] as? String,
-            let category = data["category"] as? String,
-            let description = data["description"] as? String,
-            let location = data["location"] as? String
-        else {
-            print("❌ Skipping document \(id) due to missing required fields")
-            return nil
-        }
-        
         return Listing(
-            id: id,
-            name: name,
-            category: category,
-            description: description,
-            location: location,
-            imageURL: data["imageURL"] as? String,
+            id: document.documentID,
+            name: data["name"] as? String ?? "",
+            category: data["category"] as? String ?? "",
+            description: data["description"] as? String ?? "",
+            location: data["location"] as? String ?? "",
             isBrizPick: data["isBrizPick"] as? Bool,
             isVegan: data["isVegan"] as? Bool,
             isVeg: data["isVeg"] as? Bool,
@@ -272,13 +156,7 @@ class ListingsViewModel: ObservableObject {
             isChild: data["isChild"] as? Bool
         )
     }
-
-    private func handleError(_ error: Error, message: String) {
-        errorMessage = "\(message): \(error.localizedDescription)"
-        showError = true
-        print("❌ \(message): \(error)")
-    }
-
+    
     private func createListingData(from listing: Listing) -> [String: Any] {
         var data: [String: Any] = [
             "name": listing.name,
@@ -287,7 +165,6 @@ class ListingsViewModel: ObservableObject {
             "location": listing.location
         ]
         
-        // Add optional fields
         if let isBrizPick = listing.isBrizPick { data["isBrizPick"] = isBrizPick }
         if let isVegan = listing.isVegan { data["isVegan"] = isVegan }
         if let isVeg = listing.isVeg { data["isVeg"] = isVeg }
@@ -295,5 +172,13 @@ class ListingsViewModel: ObservableObject {
         if let isChild = listing.isChild { data["isChild"] = isChild }
         
         return data
+    }
+    
+    private func handleFirestoreError(_ error: Error?, message: String) {
+        if let error = error {
+            errorMessage = "\(message): \(error.localizedDescription)"
+            showError = true
+            print("❌ \(message): \(error)")
+        }
     }
 }

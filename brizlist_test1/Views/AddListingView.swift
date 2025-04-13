@@ -14,7 +14,6 @@ struct AddListingView: View {
     @State private var name = ""
     @State private var category = ""
     @State private var description = ""
-    @State private var rating: Double = 3.0
     @State private var location = ""
     @State private var isVegan: Bool = false
     @State private var isVeg: Bool = false
@@ -40,21 +39,26 @@ struct AddListingView: View {
                     Toggle("Briz Pick", isOn: $isBrizPick)
                 }
                 
-                Button("Save") {
-                    viewModel.addListing(
-                        name: name,
-                        category: category,
-                        description: description,
-                        location: location,
-                        isBrizPick: isBrizPick,
-                        isVegan: isVegan,
-                        isVeg: isVeg,
-                        isDog: isDog,
-                        isChild: isChild
-                    )
-                    dismiss()
+                Section {
+                    Button(action: {
+                        let newListing = Listing(
+                            name: name,
+                            category: category,
+                            description: description,
+                            location: location,
+                            isBrizPick: isBrizPick,
+                            isVegan: isVegan,
+                            isVeg: isVeg,
+                            isDog: isDog,
+                            isChild: isChild
+                        )
+                        viewModel.addListing(newListing)
+                        dismiss()
+                    }) {
+                        Text("Save")
+                    }
+                    .disabled(name.isEmpty || category.isEmpty || description.isEmpty || location.isEmpty)
                 }
-                .disabled(name.isEmpty || category.isEmpty)
             }
             .navigationTitle("Add Listing")
             .toolbar {

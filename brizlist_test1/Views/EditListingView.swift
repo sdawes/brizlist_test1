@@ -66,10 +66,10 @@ struct EditListingView: View {
                     updatedListing.isDog = isDog
                     updatedListing.isChild = isChild
                     updatedListing.isBrizPick = isBrizPick
-                    viewModel.updateListing(listing: updatedListing)
+                    viewModel.updateListing(updatedListing)
                     dismiss()
                 }
-                .disabled(name.isEmpty || category.isEmpty)
+                .disabled(name.isEmpty || category.isEmpty || description.isEmpty || location.isEmpty)
             }
             .navigationTitle("Edit Listing")
             .toolbar {
@@ -80,13 +80,5 @@ struct EditListingView: View {
                 }
             }
         }
-    }
-
-    // Computed property to check if form is valid
-    private var isFormInvalid: Bool {
-        name.isEmpty || 
-        category.isEmpty || 
-        description.isEmpty || 
-        location.isEmpty
     }
 }

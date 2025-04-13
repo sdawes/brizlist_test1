@@ -6,12 +6,34 @@
 //
 
 import SwiftUI
-import Firebase
+import FirebaseCore
+import FirebaseFirestore
 
 @main
 struct BrizlistApp: App {
-    // This connects your AppDelegate to the SwiftUI lifecycle
-    @UIApplicationDelegateAdaptor private var appDelegate: AppDelegate
+    // Initialize Firebase when the app starts
+    init() {
+        // Configure Firebase for Firestore and Storage access
+        FirebaseApp.configure()
+        
+        // Reduce Firebase console logs to errors only (keeps Xcode output clean)
+        FirebaseConfiguration.shared.setLoggerLevel(.error)
+        
+        // Set up Firestore with offline persistence
+        let settings = FirestoreSettings()
+        
+        // Use a default PersistentCacheSettings instance to enable offline persistence
+        // This avoids the newBuilder() error in Firebase 11.9
+        // Note: This uses the default cache size (100 MB) instead of unlimited
+        // This allows your app to work offline and load listings faster
+        settings.cacheSettings = PersistentCacheSettings()
+        
+        // Apply the settings to Firestore
+        Firestore.firestore().settings = settings
+        
+        // Debug: Confirm Firebase SDK version
+        print("Firebase SDK Version: \(FirebaseVersion())")
+    }
     
     var body: some Scene {
         WindowGroup {
