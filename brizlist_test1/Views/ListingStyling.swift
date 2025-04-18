@@ -106,11 +106,13 @@ struct ListingStyling {
         case "restaurant", "bistro":
             return Color(red: 0.95, green: 0.87, blue: 0.73) // Pastel orange/peach
         case "café", "cafe", "coffee shop":
-            return Color(red: 0.87, green: 0.80, blue: 0.95) // Pastel purple
+            return Color(red: 0.75, green: 0.89, blue: 0.97) // #BEE3F8 - Light blue
         case "bakery":
             return Color(red: 0.95, green: 0.80, blue: 0.85) // Pastel pink
         case "deli", "food market":
             return Color(red: 0.75, green: 0.87, blue: 0.95) // Pastel blue
+        case "takeaway", "fast food":
+            return Color(red: 1.0, green: 0.7, blue: 0.28) // #FFB347 - Pastel yellow/orange
         default:
             return Color.white // Default white for other categories
         }

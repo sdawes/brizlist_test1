@@ -616,8 +616,29 @@ struct ListingStyling {
     // MARK: - Sunday Lunch Symbol
     
     static func sundayLunchSymbol() -> some View {
-        Image(systemName: "fork.knife")
+        Image(systemName: "oven.fill")
             .font(.caption)
+    }
+
+    // MARK: - CATEGORY COLORS
+
+    static func colorForCategory(_ category: String) -> Color {
+        switch category.lowercased() {
+        case "pub", "bar":
+            return Color(red: 0.82, green: 0.94, blue: 0.88) // #D0F0E0
+        case "restaurant", "bistro":
+            return Color(red: 0.95, green: 0.87, blue: 0.73) // Pastel orange/peach
+        case "café", "cafe", "coffee shop":
+            return Color(red: 0.75, green: 0.89, blue: 0.97) // #BEE3F8 - Light blue
+        case "bakery":
+            return Color(red: 0.95, green: 0.80, blue: 0.85) // Pastel pink
+        case "deli", "food market":
+            return Color(red: 0.75, green: 0.87, blue: 0.95) // Pastel blue
+        case "takeaway", "fast food":
+            return Color(red: 1.0, green: 0.7, blue: 0.28) // #FFB347 - Pastel yellow/orange
+        default:
+            return Color.white // Default white for other categories
+        }
     }
 
 }
@@ -801,94 +822,109 @@ struct ListingCardView: View {
         Button(action: {
             showingDetailView = true
         }) {
-            // Simple white card
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
+            // White card
+            ZStack {
+                // White background
+                Color.white
+                    .cornerRadius(12)
+                
+                // Main content
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        // Category name at top left (replacing listing name)
+                        Text(listing.category.uppercased())
+                            .font(.subheadline)
+                            .fontWeight(.bold)
+                            .foregroundColor(Color.black)
+                        Spacer()
+                        
+                        // Other amenity symbols at top right
+                        HStack(spacing: 4) {
+                            // Briz Pick star
+                            if listing.isBrizPick ?? false {
+                                ListingStyling.brizPickCustomSymbol()
+                            }
+                            
+                            if listing.isVegan ?? false {
+                                ListingStyling.veganSymbol()
+                                    .foregroundColor(.black) 
+                            }
+                            if listing.isVeg ?? false {
+                                ListingStyling.vegSymbol()
+                                    .foregroundColor(.black)
+                            }
+                            if listing.isDog ?? false {
+                                ListingStyling.dogSymbol()
+                                    .foregroundColor(.black)
+                            }
+                            if listing.isChild ?? false {
+                                ListingStyling.childSymbol()
+                                    .foregroundColor(.black)
+                            }
+                            if listing.isSundayLunch ?? false {
+                                ListingStyling.sundayLunchSymbol()
+                                    .foregroundColor(.black)
+                            }
+                        }
+                    }
+                    
+                    // Divider line (kept as is)
+                    Divider()
+                        .padding(.top, 2)
+                        .padding(.bottom, 4)
+
+                    // Listing name now below the divider
                     Text(listing.name)
                         .font(.headline)
                         .foregroundColor(.black)
+                        .padding(.bottom, 2)
                     
-                    // Briz Pick star right next to name
-                    if listing.isBrizPick ?? false {
-                        ListingStyling.brizPickCustomSymbol()
-                    }
-                    
-                    Spacer()
-                    
-                    // Other amenity symbols
-                    HStack(spacing: 4) {
-                        if listing.isVegan ?? false {
-                            ListingStyling.veganSymbol()
-                                .foregroundColor(.black) 
-                        }
-                        if listing.isVeg ?? false {
-                            ListingStyling.vegSymbol()
-                                .foregroundColor(.black)
-                        }
-                        if listing.isDog ?? false {
-                            ListingStyling.dogSymbol()
-                                .foregroundColor(.black)
-                        }
-                        if listing.isChild ?? false {
-                            ListingStyling.childSymbol()
-                                .foregroundColor(.black)
-                        }
-                        if listing.isSundayLunch ?? false {
-                            ListingStyling.sundayLunchSymbol()
-                                .foregroundColor(.black)
-                        }
-                    }
-                }
-                
-                // Divider line
-                Divider()
-                    .padding(.top, 2)
-                    .padding(.bottom, 4)
-
-                // Add description back
-                if !listing.description.isEmpty {
-                    Text(listing.description)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(2)
-                }
-
-            
-                
-                Spacer()
-                
-                // Footer with rating, type and edit button
-                HStack {
-                    
-                // Category
-                ListingStyling.categoryTextView(listing.category)
-                    
-                    Text("•")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                    
-                    ListingStyling.locationTextView(listing.location)
-                    
-                    Text("•")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                    
-                    Spacer()
-                    
-                    // Edit button
-                    Button(action: {
-                        onEdit(listing)
-                    }) {
-                        Image(systemName: "pencil.circle")
+                    // Description (kept below listing name)
+                    if !listing.description.isEmpty {
+                        Text(listing.description)
                             .font(.caption)
-                            .foregroundColor(.gray)
+                            .foregroundColor(.secondary)
+                            .lineLimit(2)
+                    }
+
+                    Spacer()
+                    
+                    // Footer with location and action buttons
+                    HStack {
+                        // Location in bottom left (kept as is)
+                        HStack(spacing: 4) {
+                            Image(systemName: "location.circle.fill")
+                                .font(.caption2)
+                                .foregroundColor(Color.black)
+                                
+                            Text(listing.location.uppercased())
+                                .font(.caption2)
+                                .foregroundColor(Color.black)
+                        }
+                        
+                        Spacer()
+                        
+                        // Edit and delete buttons
+                        Button(action: {
+                            onEdit(listing)
+                        }) {
+                            Image(systemName: "pencil.circle")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
+
+                        Button(action: {
+                            onDelete(listing)
+                        }) {
+                            Image(systemName: "trash.circle")
+                                .font(.caption)
+                                .foregroundColor(.red)
+                        }
                     }
                 }
+                .padding()
+                .frame(height: 160)
             }
-            .padding()
-            .frame(height: 160)
-            .background(Color.white)
-            .cornerRadius(12)
         }
         .buttonStyle(PlainButtonStyle())
         .contextMenu {
@@ -1015,9 +1051,8 @@ struct ContentView: View {
     
     var body: some View {
         ZStack {
-            // Background color
-            // Color(.systemGroupedBackground)
-            Color(red: 0.95, green: 0.95, blue: 0.97)
+            // System grey color to match the header
+            Color(.systemGray6)  // This is the same color used in HeaderView
                 .ignoresSafeArea()
 
             // Main content

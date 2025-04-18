@@ -15,9 +15,8 @@ struct ContentView: View {
     
     var body: some View {
         ZStack {
-            // Background color
-            // Color(.systemGroupedBackground)
-            Color(red: 0.95, green: 0.95, blue: 0.97)
+            // System grey color to match the header
+            Color(.systemGray6)  // This is the same color used in HeaderView
                 .ignoresSafeArea()
 
             // Main content
@@ -108,7 +107,7 @@ struct FloatingAddButton: View {
                     Image(systemName: "plus")
                         .font(.headline)
                         .foregroundColor(.white)
-                        .frame(width: 50, height: 50)
+                        .frame(width: 30, height: 30)
                         .background(Color.blue)
                         .clipShape(Circle())
                         .shadow(radius: 4)

@@ -17,35 +17,29 @@ struct ListingCardView: View {
         Button(action: {
             showingDetailView = true
         }) {
-            // Card with category background
-            ZStack(alignment: .center) {
-                // Background color
-                ListingStyling.colorForCategory(listing.category)
+            // White card
+            ZStack {
+                // White background
+                Color.white
                     .cornerRadius(12)
-                
-                // Large category text watermark (for all categories)
-                Text(listing.category.uppercased())
-                    .font(.system(size: 40, weight: .black))
-                    .foregroundColor(.white.opacity(0.5))  // Less transparent
-                    .rotationEffect(.degrees(-10))
-                    .frame(maxWidth: .infinity)
                 
                 // Main content
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text(listing.name)
-                            .font(.headline)
-                            .foregroundColor(.black)
-                        
-                        // Briz Pick star right next to name
-                        if listing.isBrizPick ?? false {
-                            ListingStyling.brizPickCustomSymbol()
-                        }
-                        
+                        // Category name at top left (replacing listing name)
+                        Text(listing.category.uppercased())
+                            .font(.subheadline)
+                            .fontWeight(.bold)
+                            .foregroundColor(Color.black)
                         Spacer()
                         
-                        // Other amenity symbols
+                        // Other amenity symbols at top right
                         HStack(spacing: 4) {
+                            // Briz Pick star
+                            if listing.isBrizPick ?? false {
+                                ListingStyling.brizPickCustomSymbol()
+                            }
+                            
                             if listing.isVegan ?? false {
                                 ListingStyling.veganSymbol()
                                     .foregroundColor(.black) 
@@ -69,12 +63,18 @@ struct ListingCardView: View {
                         }
                     }
                     
-                    // Divider line
+                    // Divider line (kept as is)
                     Divider()
                         .padding(.top, 2)
                         .padding(.bottom, 4)
 
-                    // Add description back
+                    // Listing name now below the divider
+                    Text(listing.name)
+                        .font(.headline)
+                        .foregroundColor(.black)
+                        .padding(.bottom, 2)
+                    
+                    // Description (kept below listing name)
                     if !listing.description.isEmpty {
                         Text(listing.description)
                             .font(.caption)
@@ -82,26 +82,24 @@ struct ListingCardView: View {
                             .lineLimit(2)
                     }
 
-                
-                    
                     Spacer()
                     
-                    // Footer with location and action buttons (category removed)
+                    // Footer with location and action buttons
                     HStack {
-                        // Only show location now
+                        // Location in bottom left (kept as is)
                         HStack(spacing: 4) {
                             Image(systemName: "location.circle.fill")
-                                .font(.caption)
-                                .foregroundColor(Color.gray.opacity(0.7))
+                                .font(.caption2)
+                                .foregroundColor(Color.black)
                                 
                             Text(listing.location.uppercased())
-                                .font(.caption)
-                                .foregroundColor(Color.gray.opacity(0.7))
+                                .font(.caption2)
+                                .foregroundColor(Color.black)
                         }
                         
                         Spacer()
                         
-                        // Edit button
+                        // Edit and delete buttons
                         Button(action: {
                             onEdit(listing)
                         }) {
@@ -110,7 +108,6 @@ struct ListingCardView: View {
                                 .foregroundColor(.gray)
                         }
 
-                        // Delete button
                         Button(action: {
                             onDelete(listing)
                         }) {
