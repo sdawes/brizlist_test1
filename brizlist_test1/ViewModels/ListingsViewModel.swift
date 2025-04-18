@@ -23,7 +23,28 @@ class ListingsViewModel: ObservableObject {
     private var lastDocument: DocumentSnapshot?
     private var listener: ListenerRegistration?
     
+    struct FilterOption {
+        let field: String      // Firestore field name (e.g., "isBrizPick")
+        let displayName: String // UI display name (e.g., "Briz Picks")
+    }
+    
+    // Dictionary to track which filters are active
+    @Published var activeFilterValues: [String: Bool] = [:]
+    
+    // List of available filters (for UI and reference)
+    let availableFilters: [FilterOption] = [
+        FilterOption(field: "isBrizPick", displayName: "Briz Picks"),
+        FilterOption(field: "isSundayLunch", displayName: "Sunday Lunch"),
+        FilterOption(field: "isVegan", displayName: "Vegan Friendly"),
+        FilterOption(field: "isDog", displayName: "Dog Friendly"),
+        // Add more filters as needed
+    ]
+    
     init() {
+        // Initialize all filters to false (inactive)
+        for filter in availableFilters {
+            activeFilterValues[filter.field] = false
+        }
         listenForListings()
     }
     
@@ -32,6 +53,8 @@ class ListingsViewModel: ObservableObject {
     }
     
     // MARK: - Public Methods
+    // ================================
+
     public func fetchListings() {
         resetPaginationState()
         fetchData(query: createBaseQuery(), isInitialFetch: true)
@@ -80,16 +103,30 @@ class ListingsViewModel: ObservableObject {
             self?.handleFirestoreError(error, message: "Error deleting listing")
         }
     }
+
+    // Helper to check if any filters are active
+    var hasActiveFilters: Bool {
+        activeFilterValues.values.contains(true)
+    }
     
     // MARK: - Private Helpers
+    // ================================
+
     private var canLoadMore: Bool {
         !isLoadingMore && hasMoreListings && lastDocument != nil
     }
     
     private func createBaseQuery() -> Query {
-        db.collection("listings")
-          .order(by: "name")
-          .limit(to: pageSize)
+        var query = db.collection("listings").order(by: "name")
+        
+        // Apply all active filters
+        for (field, isActive) in activeFilterValues {
+            if isActive {
+                query = query.whereField(field, isEqualTo: true)
+            }
+        }
+        
+        return query.limit(to: pageSize)
     }
     
     private func resetPaginationState() {
@@ -153,7 +190,8 @@ class ListingsViewModel: ObservableObject {
             isVegan: data["isVegan"] as? Bool,
             isVeg: data["isVeg"] as? Bool,
             isDog: data["isDog"] as? Bool,
-            isChild: data["isChild"] as? Bool
+            isChild: data["isChild"] as? Bool,
+            isSundayLunch: data["isSundayLunch"] as? Bool
         )
     }
     
@@ -170,6 +208,7 @@ class ListingsViewModel: ObservableObject {
         if let isVeg = listing.isVeg { data["isVeg"] = isVeg }
         if let isDog = listing.isDog { data["isDog"] = isDog }
         if let isChild = listing.isChild { data["isChild"] = isChild }
+        if let isSundayLunch = listing.isSundayLunch { data["isSundayLunch"] = isSundayLunch }
         
         return data
     }

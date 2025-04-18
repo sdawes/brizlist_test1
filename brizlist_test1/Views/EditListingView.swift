@@ -22,6 +22,7 @@ struct EditListingView: View {
     @State private var isDog: Bool
     @State private var isChild: Bool
     @State private var isBrizPick: Bool
+    @State private var isSundayLunch: Bool
     
     init(viewModel: ListingsViewModel, listing: Listing) {
         self.viewModel = viewModel
@@ -35,6 +36,7 @@ struct EditListingView: View {
         _isDog = State(initialValue: listing.isDog ?? false)
         _isChild = State(initialValue: listing.isChild ?? false)
         _isBrizPick = State(initialValue: listing.isBrizPick ?? false)
+        _isSundayLunch = State(initialValue: listing.isSundayLunch ?? false)
     }
     
     var body: some View {
@@ -53,6 +55,7 @@ struct EditListingView: View {
                     Toggle("Dog Friendly", isOn: $isDog)
                     Toggle("Child Friendly", isOn: $isChild)
                     Toggle("Briz Pick", isOn: $isBrizPick)
+                    Toggle("Sunday Lunch", isOn: $isSundayLunch)
                 }
                 
                 Button("Update") {
@@ -66,6 +69,7 @@ struct EditListingView: View {
                     updatedListing.isDog = isDog
                     updatedListing.isChild = isChild
                     updatedListing.isBrizPick = isBrizPick
+                    updatedListing.isSundayLunch = isSundayLunch
                     viewModel.updateListing(updatedListing)
                     dismiss()
                 }

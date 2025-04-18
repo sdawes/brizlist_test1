@@ -57,6 +57,14 @@ struct ListingStyling {
     static func brizPickStar() -> some View {
         Image(systemName: "star.fill")
             .font(.caption)
+            .foregroundColor(.red) // Standard system red
+    }
+
+    // MARK: - BrizPick Custom Symbol
+    
+    static func brizPickCustomSymbol() -> some View {
+        Image(systemName: "star.fill")
+            .font(.caption)
             .foregroundColor(.black)
     }
 
@@ -80,6 +88,32 @@ struct ListingStyling {
     static func childSymbol() -> some View {
         Image(systemName: "figure.2.and.child.holdinghands")
             .font(.caption)
+    }
+
+    // MARK: - Sunday Lunch Symbol
+    
+    static func sundayLunchSymbol() -> some View {
+        Image(systemName: "oven.fill")
+            .font(.caption)
+    }
+
+    // MARK: - CATEGORY COLORS
+
+    static func colorForCategory(_ category: String) -> Color {
+        switch category.lowercased() {
+        case "pub", "bar":
+            return Color(red: 0.82, green: 0.94, blue: 0.88) // #D0F0E0
+        case "restaurant", "bistro":
+            return Color(red: 0.95, green: 0.87, blue: 0.73) // Pastel orange/peach
+        case "café", "cafe", "coffee shop":
+            return Color(red: 0.87, green: 0.80, blue: 0.95) // Pastel purple
+        case "bakery":
+            return Color(red: 0.95, green: 0.80, blue: 0.85) // Pastel pink
+        case "deli", "food market":
+            return Color(red: 0.75, green: 0.87, blue: 0.95) // Pastel blue
+        default:
+            return Color.white // Default white for other categories
+        }
     }
 
 }

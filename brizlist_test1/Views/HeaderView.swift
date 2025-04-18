@@ -9,6 +9,7 @@ import Foundation
 import SwiftUI
 
 struct HeaderView: View {
+    @ObservedObject var viewModel: ListingsViewModel
     @State private var showingFilterSheet = false
     @State private var showingAboutSheet = false
 
@@ -24,6 +25,19 @@ struct HeaderView: View {
                 Text("Brizlist")
                     .font(.headline)
                     .fontWeight(.bold)
+
+                if viewModel.hasActiveFilters {
+                    HStack(spacing: 4) {
+                        Image(systemName: "line.3.horizontal.decrease.circle.fill")
+                            .foregroundColor(.blue)
+                            .font(.caption)
+                        
+                        let count = viewModel.activeFilterValues.values.filter { $0 }.count
+                        Text("\(count)")
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                    }
+                }
 
                 Spacer()
 
@@ -55,16 +69,18 @@ struct HeaderView: View {
                 .frame(height: 1)
         }
         .sheet(isPresented: $showingFilterSheet, content: {
-            FilterSheetView()
-            .presentationDetents([.medium])
+            FilterSheetView(viewModel: viewModel)
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         })
         .sheet(isPresented: $showingAboutSheet, content: {
             AboutSheetView()
             .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         })
     }
 }
 
 #Preview {
-    HeaderView()
+    HeaderView(viewModel: ListingsViewModel())
 }

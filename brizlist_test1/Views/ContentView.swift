@@ -16,12 +16,13 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             // Background color
-            Color(.systemGroupedBackground)
+            // Color(.systemGroupedBackground)
+            Color(red: 0.95, green: 0.95, blue: 0.97)
                 .ignoresSafeArea()
 
             // Main content
             VStack(spacing: 0) {
-                HeaderView()
+                HeaderView(viewModel: viewModel)
                 ListingsScrollView(viewModel: viewModel, listingToEdit: $listingToEdit)
             }
             

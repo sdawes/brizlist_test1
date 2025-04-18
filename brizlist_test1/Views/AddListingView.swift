@@ -20,6 +20,7 @@ struct AddListingView: View {
     @State private var isDog: Bool = false
     @State private var isChild: Bool = false
     @State private var isBrizPick: Bool = false
+    @State private var isSundayLunch: Bool = false
     
     var body: some View {
         NavigationView {
@@ -37,6 +38,7 @@ struct AddListingView: View {
                     Toggle("Dog Friendly", isOn: $isDog)
                     Toggle("Child Friendly", isOn: $isChild)
                     Toggle("Briz Pick", isOn: $isBrizPick)
+                    Toggle("Sunday Lunch", isOn: $isSundayLunch)
                 }
                 
                 Section {
@@ -50,7 +52,8 @@ struct AddListingView: View {
                             isVegan: isVegan,
                             isVeg: isVeg,
                             isDog: isDog,
-                            isChild: isChild
+                            isChild: isChild,
+                            isSundayLunch: isSundayLunch
                         )
                         viewModel.addListing(newListing)
                         dismiss()

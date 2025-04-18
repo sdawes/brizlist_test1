@@ -21,149 +21,177 @@ class ListingsViewModel: ObservableObject {
     private let db = Firestore.firestore()
     private let pageSize = 20
     private var lastDocument: DocumentSnapshot?
-    private var isInitialFetchDone = false
+    private var listener: ListenerRegistration?
     
-    // MARK: - Field Definitions
-    /// Single source of truth for listing fields
-    private enum ListingFields {
-        static let required = [
-            "name",
-            "category",
-            "description",
-            "location"
-        ]
-        
-        static let optional = [
-            "imageURL",
-            "isBrizPick",
-            "isVegan",
-            "isVeg",
-            "isDog",
-            "isChild"
-        ]
-        
-        static let all = required + optional
+    struct FilterOption {
+        let field: String      // Firestore field name (e.g., "isBrizPick")
+        let displayName: String // UI display name (e.g., "Briz Picks")
     }
     
-    // MARK: - Firestore Operations
+    // Dictionary to track which filters are active
+    @Published var activeFilterValues: [String: Bool] = [:]
+    
+    // List of available filters (for UI and reference)
+    let availableFilters: [FilterOption] = [
+        FilterOption(field: "isBrizPick", displayName: "Briz Picks"),
+        FilterOption(field: "isSundayLunch", displayName: "Sunday Lunch"),
+        FilterOption(field: "isVegan", displayName: "Vegan Friendly"),
+        FilterOption(field: "isDog", displayName: "Dog Friendly"),
+        // Add more filters as needed
+    ]
+    
+    init() {
+        // Initialize all filters to false (inactive)
+        for filter in availableFilters {
+            activeFilterValues[filter.field] = false
+        }
+        listenForListings()
+    }
+    
+    deinit {
+        listener?.remove()
+    }
+    
+    // MARK: - Public Methods
+    // ================================
+
     public func fetchListings() {
         resetPaginationState()
-        fetchListings(query: createBaseQuery())
+        fetchData(query: createBaseQuery(), isInitialFetch: true)
     }
     
     public func loadMoreListings() {
-        guard canLoadMore else { return }
+        guard canLoadMore, let lastDoc = lastDocument else { return }
         isLoadingMore = true
-        fetchListings(query: createBaseQuery().start(afterDocument: lastDocument!))
+        
+        let query = db.collection("listings")
+            .order(by: "name")
+            .start(afterDocument: lastDoc)
+            .limit(to: pageSize)
+            
+        fetchData(query: query, isInitialFetch: false)
     }
     
     func addListing(_ listing: Listing) {
         db.collection("listings").document().setData(
             createListingData(from: listing)
         ) { [weak self] error in
-            if let error = error {
-                self?.handleError(error, message: "Error adding listing")
-            }
+            self?.handleFirestoreError(error, message: "Error adding listing")
         }
     }
     
     func updateListing(_ listing: Listing) {
         guard let id = listing.id else {
-            handleError(NSError(domain: "", code: -1), message: "Missing listing ID")
+            handleFirestoreError(NSError(domain: "", code: -1), message: "Missing listing ID")
             return
         }
         
         db.collection("listings").document(id).updateData(
             createListingData(from: listing)
         ) { [weak self] error in
-            if let error = error {
-                self?.handleError(error, message: "Error updating listing")
-            }
+            self?.handleFirestoreError(error, message: "Error updating listing")
         }
     }
     
     func deleteListing(_ listing: Listing) {
         guard let id = listing.id else {
-            handleError(NSError(domain: "", code: -1), message: "Missing listing ID")
+            handleFirestoreError(NSError(domain: "", code: -1), message: "Missing listing ID")
             return
         }
         
         db.collection("listings").document(id).delete { [weak self] error in
-            if let error = error {
-                self?.handleError(error, message: "Error deleting listing")
-            }
+            self?.handleFirestoreError(error, message: "Error deleting listing")
         }
+    }
+
+    // Helper to check if any filters are active
+    var hasActiveFilters: Bool {
+        activeFilterValues.values.contains(true)
     }
     
     // MARK: - Private Helpers
+    // ================================
+
     private var canLoadMore: Bool {
-        !isLoadingMore && hasMoreListings && isInitialFetchDone && lastDocument != nil
+        !isLoadingMore && hasMoreListings && lastDocument != nil
     }
     
     private func createBaseQuery() -> Query {
-        db.collection("listings")
-          .order(by: "name")
-          .limit(to: pageSize)
+        var query = db.collection("listings").order(by: "name")
+        
+        // Apply all active filters
+        for (field, isActive) in activeFilterValues {
+            if isActive {
+                query = query.whereField(field, isEqualTo: true)
+            }
+        }
+        
+        return query.limit(to: pageSize)
     }
     
     private func resetPaginationState() {
         listings = []
         lastDocument = nil
         hasMoreListings = true
-        isInitialFetchDone = false
     }
     
-    private func fetchListings(query: Query) {
+    private func listenForListings() {
+        listener = createBaseQuery().addSnapshotListener { [weak self] snapshot, error in
+            self?.processQueryResults(snapshot: snapshot, error: error, isInitialFetch: true)
+        }
+    }
+    
+    private func fetchData(query: Query, isInitialFetch: Bool) {
+        isLoadingMore = !isInitialFetch
+        
         query.getDocuments { [weak self] snapshot, error in
             guard let self = self else { return }
             defer { self.isLoadingMore = false }
             
-            if let error = error {
-                self.handleError(error, message: "Error fetching listings")
-                return
-            }
-            
-            guard let documents = snapshot?.documents, !documents.isEmpty else {
-                self.hasMoreListings = false
-                return
-            }
-            
-            self.lastDocument = documents.last
-            self.hasMoreListings = documents.count >= self.pageSize
-            
-            let newListings = documents.compactMap(self.createListing)
-            if self.isInitialFetchDone {
-                self.listings.append(contentsOf: newListings)
-            } else {
-                self.listings = newListings
-                self.isInitialFetchDone = true
-            }
+            self.processQueryResults(snapshot: snapshot, error: error, isInitialFetch: isInitialFetch)
         }
     }
     
-    private func createListing(from document: QueryDocumentSnapshot) -> Listing? {
-        let data = document.data()
-        
-        guard let name = data["name"] as? String,
-              let category = data["category"] as? String,
-              let description = data["description"] as? String,
-              let location = data["location"] as? String
-        else {
-            print("❌ Skipping document \(document.documentID) due to missing required fields")
-            return nil
+    private func processQueryResults(snapshot: QuerySnapshot?, error: Error?, isInitialFetch: Bool) {
+        if let error = error {
+            handleFirestoreError(error, message: "Error fetching listings")
+            return
         }
         
+        guard let documents = snapshot?.documents, !documents.isEmpty else {
+            hasMoreListings = false
+            if isInitialFetch {
+                listings = []
+            }
+            return
+        }
+        
+        lastDocument = documents.last
+        hasMoreListings = documents.count >= pageSize
+        
+        let newListings = documents.compactMap(createListingFromDocument)
+        
+        if isInitialFetch {
+            listings = newListings
+        } else {
+            listings.append(contentsOf: newListings)
+        }
+    }
+    
+    private func createListingFromDocument(_ document: QueryDocumentSnapshot) -> Listing? {
+        let data = document.data()
         return Listing(
             id: document.documentID,
-            name: name,
-            category: category,
-            description: description,
-            location: location,
+            name: data["name"] as? String ?? "",
+            category: data["category"] as? String ?? "",
+            description: data["description"] as? String ?? "",
+            location: data["location"] as? String ?? "",
             isBrizPick: data["isBrizPick"] as? Bool,
             isVegan: data["isVegan"] as? Bool,
             isVeg: data["isVeg"] as? Bool,
             isDog: data["isDog"] as? Bool,
-            isChild: data["isChild"] as? Bool
+            isChild: data["isChild"] as? Bool,
+            isSundayLunch: data["isSundayLunch"] as? Bool
         )
     }
     
@@ -180,14 +208,17 @@ class ListingsViewModel: ObservableObject {
         if let isVeg = listing.isVeg { data["isVeg"] = isVeg }
         if let isDog = listing.isDog { data["isDog"] = isDog }
         if let isChild = listing.isChild { data["isChild"] = isChild }
+        if let isSundayLunch = listing.isSundayLunch { data["isSundayLunch"] = isSundayLunch }
         
         return data
     }
     
-    private func handleError(_ error: Error, message: String) {
-        errorMessage = "\(message): \(error.localizedDescription)"
-        showError = true
-        print("❌ \(message): \(error)")
+    private func handleFirestoreError(_ error: Error?, message: String) {
+        if let error = error {
+            errorMessage = "\(message): \(error.localizedDescription)"
+            showError = true
+            print("❌ \(message): \(error)")
+        }
     }
 }
 //
@@ -254,9 +285,10 @@ struct Listing: Identifiable, Codable {
     var isVeg: Bool?
     var isDog: Bool?
     var isChild: Bool?
+    var isSundayLunch: Bool?
     
     // Updated initializer with consistent required/optional parameters
-    init(id: String? = nil, name: String, category: String, description: String, location: String, isBrizPick: Bool? = nil, isVegan: Bool? = nil, isVeg: Bool? = nil, isDog: Bool? = nil, isChild: Bool? = nil) {
+    init(id: String? = nil, name: String, category: String, description: String, location: String, isBrizPick: Bool? = nil, isVegan: Bool? = nil, isVeg: Bool? = nil, isDog: Bool? = nil, isChild: Bool? = nil, isSundayLunch: Bool? = nil) {
         self.id = id
         self.name = name
         self.category = category
@@ -267,6 +299,7 @@ struct Listing: Identifiable, Codable {
         self.isVeg = isVeg
         self.isDog = isDog
         self.isChild = isChild
+        self.isSundayLunch = isSundayLunch
     }
 }
 //
@@ -287,8 +320,6 @@ import Foundation
 import SwiftUI
 
 struct AboutSheetView: View {
-    @Environment(\.dismiss) var dismiss
-    
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 16) {
@@ -363,17 +394,6 @@ struct AboutSheetView: View {
             .background(Color.white)
             .navigationTitle("About")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.gray)
-                            .font(.title3)
-                    }
-                }
-            }
         }
     }
 }
@@ -447,6 +467,7 @@ struct AddListingView: View {
     @State private var isDog: Bool = false
     @State private var isChild: Bool = false
     @State private var isBrizPick: Bool = false
+    @State private var isSundayLunch: Bool = false
     
     var body: some View {
         NavigationView {
@@ -464,6 +485,7 @@ struct AddListingView: View {
                     Toggle("Dog Friendly", isOn: $isDog)
                     Toggle("Child Friendly", isOn: $isChild)
                     Toggle("Briz Pick", isOn: $isBrizPick)
+                    Toggle("Sunday Lunch", isOn: $isSundayLunch)
                 }
                 
                 Section {
@@ -477,7 +499,8 @@ struct AddListingView: View {
                             isVegan: isVegan,
                             isVeg: isVeg,
                             isDog: isDog,
-                            isChild: isChild
+                            isChild: isChild,
+                            isSundayLunch: isSundayLunch
                         )
                         viewModel.addListing(newListing)
                         dismiss()
@@ -557,6 +580,14 @@ struct ListingStyling {
     static func brizPickStar() -> some View {
         Image(systemName: "star.fill")
             .font(.caption)
+            .foregroundColor(.red) // Standard system red
+    }
+
+    // MARK: - BrizPick Custom Symbol
+    
+    static func brizPickCustomSymbol() -> some View {
+        Image(systemName: "star.fill")
+            .font(.caption)
             .foregroundColor(.black)
     }
 
@@ -579,6 +610,13 @@ struct ListingStyling {
     
     static func childSymbol() -> some View {
         Image(systemName: "figure.2.and.child.holdinghands")
+            .font(.caption)
+    }
+
+    // MARK: - Sunday Lunch Symbol
+    
+    static func sundayLunchSymbol() -> some View {
+        Image(systemName: "fork.knife")
             .font(.caption)
     }
 
@@ -680,6 +718,7 @@ struct EditListingView: View {
     @State private var isDog: Bool
     @State private var isChild: Bool
     @State private var isBrizPick: Bool
+    @State private var isSundayLunch: Bool
     
     init(viewModel: ListingsViewModel, listing: Listing) {
         self.viewModel = viewModel
@@ -693,6 +732,7 @@ struct EditListingView: View {
         _isDog = State(initialValue: listing.isDog ?? false)
         _isChild = State(initialValue: listing.isChild ?? false)
         _isBrizPick = State(initialValue: listing.isBrizPick ?? false)
+        _isSundayLunch = State(initialValue: listing.isSundayLunch ?? false)
     }
     
     var body: some View {
@@ -711,6 +751,7 @@ struct EditListingView: View {
                     Toggle("Dog Friendly", isOn: $isDog)
                     Toggle("Child Friendly", isOn: $isChild)
                     Toggle("Briz Pick", isOn: $isBrizPick)
+                    Toggle("Sunday Lunch", isOn: $isSundayLunch)
                 }
                 
                 Button("Update") {
@@ -724,6 +765,7 @@ struct EditListingView: View {
                     updatedListing.isDog = isDog
                     updatedListing.isChild = isChild
                     updatedListing.isBrizPick = isBrizPick
+                    updatedListing.isSundayLunch = isSundayLunch
                     viewModel.updateListing(updatedListing)
                     dismiss()
                 }
@@ -766,9 +808,14 @@ struct ListingCardView: View {
                         .font(.headline)
                         .foregroundColor(.black)
                     
+                    // Briz Pick star right next to name
+                    if listing.isBrizPick ?? false {
+                        ListingStyling.brizPickCustomSymbol()
+                    }
+                    
                     Spacer()
                     
-                    // Amenity symbols
+                    // Other amenity symbols
                     HStack(spacing: 4) {
                         if listing.isVegan ?? false {
                             ListingStyling.veganSymbol()
@@ -786,9 +833,9 @@ struct ListingCardView: View {
                             ListingStyling.childSymbol()
                                 .foregroundColor(.black)
                         }
-                        
-                        if listing.isBrizPick ?? false {
-                            ListingStyling.brizPickStar()
+                        if listing.isSundayLunch ?? false {
+                            ListingStyling.sundayLunchSymbol()
+                                .foregroundColor(.black)
                         }
                     }
                 }
@@ -861,6 +908,7 @@ struct ListingCardView: View {
             NavigationView {
                 ListingDetailView(listing: listing)
             }
+            .presentationDragIndicator(.visible)
         }
     }
 }
@@ -875,6 +923,7 @@ import Foundation
 import SwiftUI
 
 struct HeaderView: View {
+    @ObservedObject var viewModel: ListingsViewModel
     @State private var showingFilterSheet = false
     @State private var showingAboutSheet = false
 
@@ -890,6 +939,19 @@ struct HeaderView: View {
                 Text("Brizlist")
                     .font(.headline)
                     .fontWeight(.bold)
+
+                if viewModel.hasActiveFilters {
+                    HStack(spacing: 4) {
+                        Image(systemName: "line.3.horizontal.decrease.circle.fill")
+                            .foregroundColor(.blue)
+                            .font(.caption)
+                        
+                        let count = viewModel.activeFilterValues.values.filter { $0 }.count
+                        Text("\(count)")
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                    }
+                }
 
                 Spacer()
 
@@ -921,18 +983,20 @@ struct HeaderView: View {
                 .frame(height: 1)
         }
         .sheet(isPresented: $showingFilterSheet, content: {
-            FilterSheetView()
-            .presentationDetents([.medium])
+            FilterSheetView(viewModel: viewModel)
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         })
         .sheet(isPresented: $showingAboutSheet, content: {
             AboutSheetView()
             .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         })
     }
 }
 
 #Preview {
-    HeaderView()
+    HeaderView(viewModel: ListingsViewModel())
 }
 //
 //  ContentView.swift
@@ -952,12 +1016,13 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             // Background color
-            Color(.systemGroupedBackground)
+            // Color(.systemGroupedBackground)
+            Color(red: 0.95, green: 0.95, blue: 0.97)
                 .ignoresSafeArea()
 
             // Main content
             VStack(spacing: 0) {
-                HeaderView()
+                HeaderView(viewModel: viewModel)
                 ListingsScrollView(viewModel: viewModel, listingToEdit: $listingToEdit)
             }
             
@@ -1069,8 +1134,62 @@ import Foundation
 import SwiftUI
 
 struct FilterSheetView: View {
+    @ObservedObject var viewModel: ListingsViewModel
+    @Environment(\.dismiss) var dismiss
+    
+    // Local copy of filters for preview/editing
+    @State private var localFilters: [String: Bool] = [:]
+    
+    // Initialize with current filters
+    init(viewModel: ListingsViewModel) {
+        self.viewModel = viewModel
+        
+        // Make a copy of the current filter values
+        var initialFilters: [String: Bool] = [:]
+        for filter in viewModel.availableFilters {
+            initialFilters[filter.field] = viewModel.activeFilterValues[filter.field] ?? false
+        }
+        self._localFilters = State(initialValue: initialFilters)
+    }
+    
     var body: some View {
-        Text("Filters here")
-        .padding()
+        NavigationStack {
+            Form {
+                Section(header: Text("Filter By")) {
+                    // Create a toggle for each available filter
+                    ForEach(viewModel.availableFilters, id: \.field) { filter in
+                        Toggle(filter.displayName, isOn: Binding(
+                            get: { localFilters[filter.field] ?? false },
+                            set: { localFilters[filter.field] = $0 }
+                        ))
+                    }
+                }
+                
+                Section {
+                    // Apply button applies all filters at once
+                    Button("Apply Filters") {
+                        // Update the view model with our local changes
+                        for filter in viewModel.availableFilters {
+                            viewModel.activeFilterValues[filter.field] = localFilters[filter.field] ?? false
+                        }
+                        viewModel.fetchListings()
+                        dismiss()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .frame(maxWidth: .infinity)
+                    
+                    // Clear all button
+                    Button("Clear All Filters") {
+                        for filter in viewModel.availableFilters {
+                            localFilters[filter.field] = false
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .navigationTitle("Filters")
+            .navigationBarTitleDisplayMode(.inline)
+        }
     }
 }

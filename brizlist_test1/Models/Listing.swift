@@ -19,9 +19,10 @@ struct Listing: Identifiable, Codable {
     var isVeg: Bool?
     var isDog: Bool?
     var isChild: Bool?
+    var isSundayLunch: Bool?
     
     // Updated initializer with consistent required/optional parameters
-    init(id: String? = nil, name: String, category: String, description: String, location: String, isBrizPick: Bool? = nil, isVegan: Bool? = nil, isVeg: Bool? = nil, isDog: Bool? = nil, isChild: Bool? = nil) {
+    init(id: String? = nil, name: String, category: String, description: String, location: String, isBrizPick: Bool? = nil, isVegan: Bool? = nil, isVeg: Bool? = nil, isDog: Bool? = nil, isChild: Bool? = nil, isSundayLunch: Bool? = nil) {
         self.id = id
         self.name = name
         self.category = category
@@ -32,5 +33,6 @@ struct Listing: Identifiable, Codable {
         self.isVeg = isVeg
         self.isDog = isDog
         self.isChild = isChild
+        self.isSundayLunch = isSundayLunch
     }
 }

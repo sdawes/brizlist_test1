@@ -9,8 +9,6 @@ import Foundation
 import SwiftUI
 
 struct AboutSheetView: View {
-    @Environment(\.dismiss) var dismiss
-    
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 16) {
@@ -85,17 +83,6 @@ struct AboutSheetView: View {
             .background(Color.white)
             .navigationTitle("About")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.gray)
-                            .font(.title3)
-                    }
-                }
-            }
         }
     }
 }
