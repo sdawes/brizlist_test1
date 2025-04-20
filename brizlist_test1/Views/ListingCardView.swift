@@ -17,54 +17,10 @@ struct ListingCardView: View {
         Button(action: {
             showingDetailView = true
         }) {
-            // Card structure with full-height symbol margin
-            HStack(alignment: .top, spacing: 0) {
-                // Symbol margin - full height vertical column of symbols
-                VStack(alignment: .center, spacing: 8) {
-                    // Stack symbols vertically from top down, starting immediately
-                    if listing.isFeatured ?? false { 
-                        ListingStyling.featuredSymbol() 
-                    }
-                    if listing.isBrizPick ?? false { 
-                        ListingStyling.brizPickCustomSymbol() 
-                    }
-                    if listing.isVeg ?? false { 
-                        ListingStyling.vegSymbol() 
-                    }
-                    if listing.isDog ?? false { 
-                        ListingStyling.dogSymbol() 
-                    }
-                    if listing.isChild ?? false { 
-                        ListingStyling.childSymbol() 
-                    }
-                    if listing.isSundayLunch ?? false { 
-                        ListingStyling.sundayLunchSymbol() 
-                    }
-                    
-                    Spacer(minLength: 0) // Fill remaining space
-                }
-                .padding(.top, 12)
-                .frame(width: UIScreen.main.bounds.width * 0.08)
-                .background(Color.black) // Black background for symbol margin
-                
-                // Main content area
+            // Card structure without symbol margin
+            ZStack(alignment: .top) {
+                // Main content area excluding category (starts below the category)
                 VStack(alignment: .leading, spacing: 4) {
-                    // Category and cuisine with precise padding to match symbols
-                    HStack(spacing: 4) {
-                        ListingStyling.categoryPill(listing.category)
-                        
-                        // Only show cuisine if it's not empty
-                        if !listing.cuisine.isEmpty {
-                            Text(listing.cuisine)
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                                .padding(.leading, 4)
-                        }
-                        
-                        Spacer()
-                    }
-                    .padding(.top, 12) // Exact match with symbol column padding
-                    
                     // Listing name
                     Text(listing.name)
                         .font(.headline)
@@ -75,44 +31,80 @@ struct ListingCardView: View {
                         Text(listing.description)
                             .font(.caption)
                             .foregroundColor(.secondary)
-                            .lineLimit(2)
+                            .lineLimit(3) // Allow up to 3 lines
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true) // Allow vertical expansion
+                            .frame(width: UIScreen.main.bounds.width * 0.45, alignment: .leading)
                             .padding(.top, 2)
                     }
                     
                     Spacer()
                     
-                    // Footer
-                    HStack {
-                        // Location
-                        HStack(spacing: 4) {
-                            Image(systemName: "location.circle.fill")
-                                .font(.caption2)
-                            
-                            Text(listing.location.uppercased())
-                                .font(.caption2)
-                        }
-                        .foregroundColor(.black)
+                    // Footer with just location
+                    HStack(spacing: 4) {
+                        Image(systemName: "location.circle.fill")
+                            .font(.caption2)
+                        
+                        Text(listing.location.uppercased())
+                            .font(.caption2)
                         
                         Spacer()
-                        
-                        // Action buttons
-                        HStack(spacing: 12) {
-                            Button(action: { onEdit(listing) }) {
-                                Image(systemName: "pencil.circle")
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-                            }
-                            
-                            Button(action: { onDelete(listing) }) {
-                                Image(systemName: "trash.circle")
-                                    .font(.caption)
-                                    .foregroundColor(.red)
-                            }
-                        }
+                    }
+                    .foregroundColor(.black)
+                }
+                .padding(.horizontal, 12)
+                .padding(.bottom, 12)
+                .padding(.top, 40) // Space for the category row above
+                .frame(maxWidth: .infinity, alignment: .leading)
+                
+                // Category and cuisine row - positioned at the very top
+                HStack {
+                    ListingStyling.categoryPill(listing.category)
+                    
+                    // Only show cuisine if it's not empty
+                    if !listing.cuisine.isEmpty {
+                        Text(listing.cuisine)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .padding(.leading, 4)
+                    }
+                    
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+                .padding(.top, 12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .zIndex(1)
+                
+                // Floating image box - aligned with category
+                Image("tacos")
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 120, height: 120)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .padding(.top, 12) // Same as category top padding
+                    .padding(.trailing, 12)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .zIndex(2)
+                
+                // Action buttons positioned under the image
+                HStack(spacing: 12) {
+                    Button(action: { onEdit(listing) }) {
+                        Image(systemName: "pencil.circle")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                    
+                    Button(action: { onDelete(listing) }) {
+                        Image(systemName: "trash.circle")
+                            .font(.caption)
+                            .foregroundColor(.red)
                     }
                 }
-                .padding([.trailing, .bottom], 12)
-                .padding(.leading, 8)
+                .padding(.trailing, 12)
+                .padding(.top, 137) // Position below the image (image height 120 + top padding 12 + extra 5)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .zIndex(3)
             }
             .frame(height: 160)
             .background(Color.white)
