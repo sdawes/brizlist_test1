@@ -15,11 +15,6 @@ struct HeaderView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Background color for status bar area
-            Color(.systemGray6)
-                .frame(height: 0)
-                .ignoresSafeArea(edges: .top)
-            
             // Main header content
             HStack {
                 Text("Brizlist")

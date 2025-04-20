@@ -21,7 +21,7 @@ struct AboutSheetView: View {
                 Text("What makes us different? We don't just list places - we share the spots we genuinely love and return to. From hidden gems to local favorites, we're here to help you discover the best of Bristol's food scene.")
                     .font(.caption)
                 
-                Text("Use our data driven  symbols to find places that match your needs, whether you're looking for vegan options, child-friendly spaces, or our special Briz Picks!")
+                Text("Use our data driven symbols to find places that match your needs, whether you're looking for vegetarian options, child-friendly spaces, or our special Briz Picks!")
                     .font(.caption)
                 
                 Divider()
@@ -30,15 +30,6 @@ struct AboutSheetView: View {
                     .font(.title3.bold())
                 
                 VStack(alignment: .leading, spacing: 12) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "leaf.fill")
-                            .foregroundColor(.black)
-                            .font(.caption)
-                            .frame(width: 20, alignment: .center)
-                        Text("Vegan Options")
-                            .font(.caption)
-                    }
-                    
                     HStack(spacing: 8) {
                         Image(systemName: "leaf")
                             .foregroundColor(.black)

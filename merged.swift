@@ -13,6 +13,7 @@ import SwiftUI
 class ListingsViewModel: ObservableObject {
     // MARK: - Properties
     @Published private(set) var listings: [Listing] = []
+    @Published private(set) var featuredListings: [Listing] = []
     @Published private(set) var isLoadingMore = false
     @Published private(set) var hasMoreListings = true
     @Published var errorMessage: String?
@@ -35,8 +36,8 @@ class ListingsViewModel: ObservableObject {
     let availableFilters: [FilterOption] = [
         FilterOption(field: "isBrizPick", displayName: "Briz Picks"),
         FilterOption(field: "isSundayLunch", displayName: "Sunday Lunch"),
-        FilterOption(field: "isVegan", displayName: "Vegan Friendly"),
         FilterOption(field: "isDog", displayName: "Dog Friendly"),
+        FilterOption(field: "isFeatured", displayName: "Featured"),
         // Add more filters as needed
     ]
     
@@ -131,6 +132,7 @@ class ListingsViewModel: ObservableObject {
     
     private func resetPaginationState() {
         listings = []
+        featuredListings = []
         lastDocument = nil
         hasMoreListings = true
     }
@@ -162,6 +164,7 @@ class ListingsViewModel: ObservableObject {
             hasMoreListings = false
             if isInitialFetch {
                 listings = []
+                featuredListings = []
             }
             return
         }
@@ -171,10 +174,14 @@ class ListingsViewModel: ObservableObject {
         
         let newListings = documents.compactMap(createListingFromDocument)
         
+        let (featured, regular) = separateFeaturedListings(newListings)
+        
         if isInitialFetch {
-            listings = newListings
+            featuredListings = featured
+            listings = regular
         } else {
-            listings.append(contentsOf: newListings)
+            featuredListings.append(contentsOf: featured)
+            listings.append(contentsOf: regular)
         }
     }
     
@@ -187,11 +194,11 @@ class ListingsViewModel: ObservableObject {
             description: data["description"] as? String ?? "",
             location: data["location"] as? String ?? "",
             isBrizPick: data["isBrizPick"] as? Bool,
-            isVegan: data["isVegan"] as? Bool,
             isVeg: data["isVeg"] as? Bool,
             isDog: data["isDog"] as? Bool,
             isChild: data["isChild"] as? Bool,
-            isSundayLunch: data["isSundayLunch"] as? Bool
+            isSundayLunch: data["isSundayLunch"] as? Bool,
+            isFeatured: data["isFeatured"] as? Bool
         )
     }
     
@@ -204,11 +211,11 @@ class ListingsViewModel: ObservableObject {
         ]
         
         if let isBrizPick = listing.isBrizPick { data["isBrizPick"] = isBrizPick }
-        if let isVegan = listing.isVegan { data["isVegan"] = isVegan }
         if let isVeg = listing.isVeg { data["isVeg"] = isVeg }
         if let isDog = listing.isDog { data["isDog"] = isDog }
         if let isChild = listing.isChild { data["isChild"] = isChild }
         if let isSundayLunch = listing.isSundayLunch { data["isSundayLunch"] = isSundayLunch }
+        if let isFeatured = listing.isFeatured { data["isFeatured"] = isFeatured }
         
         return data
     }
@@ -219,6 +226,21 @@ class ListingsViewModel: ObservableObject {
             showError = true
             print("❌ \(message): \(error)")
         }
+    }
+    
+    private func separateFeaturedListings(_ listings: [Listing]) -> (featured: [Listing], regular: [Listing]) {
+        var featured: [Listing] = []
+        var regular: [Listing] = []
+        
+        for listing in listings {
+            if listing.isFeatured == true {
+                featured.append(listing)
+            } else {
+                regular.append(listing)
+            }
+        }
+        
+        return (featured, regular)
     }
 }
 //
@@ -281,25 +303,69 @@ struct Listing: Identifiable, Codable {
     var description: String
     var location: String
     var isBrizPick: Bool?
-    var isVegan: Bool?
     var isVeg: Bool?
     var isDog: Bool?
     var isChild: Bool?
     var isSundayLunch: Bool?
+    var isFeatured: Bool?
     
     // Updated initializer with consistent required/optional parameters
-    init(id: String? = nil, name: String, category: String, description: String, location: String, isBrizPick: Bool? = nil, isVegan: Bool? = nil, isVeg: Bool? = nil, isDog: Bool? = nil, isChild: Bool? = nil, isSundayLunch: Bool? = nil) {
+    init(id: String? = nil, name: String, category: String, description: String, location: String, isBrizPick: Bool? = nil, isVeg: Bool? = nil, isDog: Bool? = nil, isChild: Bool? = nil, isSundayLunch: Bool? = nil, isFeatured: Bool? = nil) {
         self.id = id
         self.name = name
         self.category = category
         self.description = description
         self.location = location
         self.isBrizPick = isBrizPick
-        self.isVegan = isVegan
         self.isVeg = isVeg
         self.isDog = isDog
         self.isChild = isChild
         self.isSundayLunch = isSundayLunch
+        self.isFeatured = isFeatured
+    }
+}
+//
+//  RefreshControl.swift
+//  brizlist_test1
+//
+//  Created by Stephen Dawes on 17/03/2025.
+//
+
+import Foundation
+import SwiftUI
+
+struct RefreshControl: View {
+    var coordinateSpace: CoordinateSpace
+    var onRefresh: () -> Void
+    
+    @State private var isRefreshing = false
+    
+    var body: some View {
+        GeometryReader { geometry in
+            if geometry.frame(in: coordinateSpace).midY > 50 {
+                Spacer()
+                    .onAppear {
+                        if !isRefreshing {
+                            isRefreshing = true
+                            onRefresh()
+                        }
+                    }
+                    .onDisappear {
+                        isRefreshing = false
+                    }
+            }
+            
+            HStack {
+                Spacer()
+                if isRefreshing {
+                    ProgressView()
+                }
+                Spacer()
+            }
+            .offset(y: max(0, geometry.frame(in: coordinateSpace).midY - 30))
+        }
+        .padding(.top, -50)
+        .frame(height: 0)
     }
 }
 //
@@ -309,7 +375,13 @@ struct Listing: Identifiable, Codable {
 //  Created by Stephen Dawes on 13/04/2025.
 //
 
-//
+import Foundation
+
+struct FormValidator {
+    static func isFormValid(name: String, category: String, description: String, location: String) -> Bool {
+        return !name.isEmpty && !category.isEmpty && !description.isEmpty && !location.isEmpty
+    }
+}//
 //  AboutView.swift
 //  brizlist_test1
 //
@@ -332,7 +404,7 @@ struct AboutSheetView: View {
                 Text("What makes us different? We don't just list places - we share the spots we genuinely love and return to. From hidden gems to local favorites, we're here to help you discover the best of Bristol's food scene.")
                     .font(.caption)
                 
-                Text("Use our data driven  symbols to find places that match your needs, whether you're looking for vegan options, child-friendly spaces, or our special Briz Picks!")
+                Text("Use our data driven symbols to find places that match your needs, whether you're looking for vegetarian options, child-friendly spaces, or our special Briz Picks!")
                     .font(.caption)
                 
                 Divider()
@@ -341,15 +413,6 @@ struct AboutSheetView: View {
                     .font(.title3.bold())
                 
                 VStack(alignment: .leading, spacing: 12) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "leaf.fill")
-                            .foregroundColor(.black)
-                            .font(.caption)
-                            .frame(width: 20, alignment: .center)
-                        Text("Vegan Options")
-                            .font(.caption)
-                    }
-                    
                     HStack(spacing: 8) {
                         Image(systemName: "leaf")
                             .foregroundColor(.black)
@@ -402,50 +465,6 @@ struct AboutSheetView: View {
     AboutSheetView()
 }
 //
-//  RefreshControl.swift
-//  brizlist_test1
-//
-//  Created by Stephen Dawes on 17/03/2025.
-//
-
-import Foundation
-import SwiftUI
-
-struct RefreshControl: View {
-    var coordinateSpace: CoordinateSpace
-    var onRefresh: () -> Void
-    
-    @State private var isRefreshing = false
-    
-    var body: some View {
-        GeometryReader { geometry in
-            if geometry.frame(in: coordinateSpace).midY > 50 {
-                Spacer()
-                    .onAppear {
-                        if !isRefreshing {
-                            isRefreshing = true
-                            onRefresh()
-                        }
-                    }
-                    .onDisappear {
-                        isRefreshing = false
-                    }
-            }
-            
-            HStack {
-                Spacer()
-                if isRefreshing {
-                    ProgressView()
-                }
-                Spacer()
-            }
-            .offset(y: max(0, geometry.frame(in: coordinateSpace).midY - 30))
-        }
-        .padding(.top, -50)
-        .frame(height: 0)
-    }
-}
-//
 //  AddListingView.swift
 //  brizlist_test1
 //
@@ -462,12 +481,12 @@ struct AddListingView: View {
     @State private var category = ""
     @State private var description = ""
     @State private var location = ""
-    @State private var isVegan: Bool = false
     @State private var isVeg: Bool = false
     @State private var isDog: Bool = false
     @State private var isChild: Bool = false
     @State private var isBrizPick: Bool = false
     @State private var isSundayLunch: Bool = false
+    @State private var isFeatured: Bool = false
     
     var body: some View {
         NavigationView {
@@ -480,12 +499,12 @@ struct AddListingView: View {
                 }
 
                 Section(header: Text("Features")) {
-                    Toggle("Vegan Friendly", isOn: $isVegan)
                     Toggle("Vegetarian Friendly", isOn: $isVeg)
                     Toggle("Dog Friendly", isOn: $isDog)
                     Toggle("Child Friendly", isOn: $isChild)
                     Toggle("Briz Pick", isOn: $isBrizPick)
                     Toggle("Sunday Lunch", isOn: $isSundayLunch)
+                    Toggle("Featured", isOn: $isFeatured)
                 }
                 
                 Section {
@@ -496,11 +515,11 @@ struct AddListingView: View {
                             description: description,
                             location: location,
                             isBrizPick: isBrizPick,
-                            isVegan: isVegan,
                             isVeg: isVeg,
                             isDog: isDog,
                             isChild: isChild,
-                            isSundayLunch: isSundayLunch
+                            isSundayLunch: isSundayLunch,
+                            isFeatured: isFeatured
                         )
                         viewModel.addListing(newListing)
                         dismiss()
@@ -620,25 +639,60 @@ struct ListingStyling {
             .font(.caption)
     }
 
-    // MARK: - CATEGORY COLORS
+    
 
-    static func colorForCategory(_ category: String) -> Color {
+    // MARK: - Category Pill
+
+    static func categoryPill(_ category: String) -> some View {
+        let systemName: String
+        let color: Color
+        
         switch category.lowercased() {
         case "pub", "bar":
-            return Color(red: 0.82, green: 0.94, blue: 0.88) // #D0F0E0
+            systemName = "mug.fill"
+            color = Color(red: 0.13, green: 0.55, blue: 0.13) // Deep forest green
         case "restaurant", "bistro":
-            return Color(red: 0.95, green: 0.87, blue: 0.73) // Pastel orange/peach
+            systemName = "fork.knife"
+            color = Color(red: 0.75, green: 0.0, blue: 0.0) // Deep crimson red
         case "café", "cafe", "coffee shop":
-            return Color(red: 0.75, green: 0.89, blue: 0.97) // #BEE3F8 - Light blue
+            systemName = "cup.and.saucer.fill"
+            color = Color(red: 0.0, green: 0.35, blue: 0.65) // Rich navy blue
         case "bakery":
-            return Color(red: 0.95, green: 0.80, blue: 0.85) // Pastel pink
+            systemName = "birthday.cake.fill"
+            color = Color(red: 0.65, green: 0.16, blue: 0.43) // Deep magenta
         case "deli", "food market":
-            return Color(red: 0.75, green: 0.87, blue: 0.95) // Pastel blue
+            systemName = "basket.fill"
+            color = Color(red: 0.55, green: 0.27, blue: 0.07) // Rich brown
         case "takeaway", "fast food":
-            return Color(red: 1.0, green: 0.7, blue: 0.28) // #FFB347 - Pastel yellow/orange
+            systemName = "bag.fill"
+            color = Color(red: 0.85, green: 0.53, blue: 0.0) // Deep amber/orange
         default:
-            return Color.white // Default white for other categories
+            systemName = "mappin"
+            color = Color(red: 0.35, green: 0.35, blue: 0.35) // Dark charcoal
         }
+        
+        return HStack(spacing: 6) {
+            Image(systemName: systemName)
+                .font(.caption2)
+            
+            Text(category.uppercased())
+                .font(.caption2)
+                .fontWeight(.semibold)
+        }
+        .foregroundColor(.white)
+        .padding(.vertical, 4)
+        .padding(.horizontal, 8)
+        .background(
+            Capsule()
+                .fill(color)
+        )
+    }
+
+    // MARK: - Featured Symbol
+    static func featuredSymbol() -> some View {
+        Image(systemName: "medal.fill")
+            .font(.caption)
+            .foregroundColor(.orange) // Gold/orange color for the medal
     }
 
 }
@@ -734,12 +788,12 @@ struct EditListingView: View {
     @State private var category: String
     @State private var description: String
     @State private var location: String
-    @State private var isVegan: Bool
     @State private var isVeg: Bool
     @State private var isDog: Bool
     @State private var isChild: Bool
     @State private var isBrizPick: Bool
     @State private var isSundayLunch: Bool
+    @State private var isFeatured: Bool
     
     init(viewModel: ListingsViewModel, listing: Listing) {
         self.viewModel = viewModel
@@ -748,12 +802,12 @@ struct EditListingView: View {
         _category = State(initialValue: listing.category)
         _description = State(initialValue: listing.description)
         _location = State(initialValue: listing.location)
-        _isVegan = State(initialValue: listing.isVegan ?? false)
         _isVeg = State(initialValue: listing.isVeg ?? false)
         _isDog = State(initialValue: listing.isDog ?? false)
         _isChild = State(initialValue: listing.isChild ?? false)
         _isBrizPick = State(initialValue: listing.isBrizPick ?? false)
         _isSundayLunch = State(initialValue: listing.isSundayLunch ?? false)
+        _isFeatured = State(initialValue: listing.isFeatured ?? false)
     }
     
     var body: some View {
@@ -767,12 +821,12 @@ struct EditListingView: View {
                 }
 
                 Section(header: Text("Features")) {
-                    Toggle("Vegan Friendly", isOn: $isVegan)
                     Toggle("Vegetarian Friendly", isOn: $isVeg)
                     Toggle("Dog Friendly", isOn: $isDog)
                     Toggle("Child Friendly", isOn: $isChild)
                     Toggle("Briz Pick", isOn: $isBrizPick)
                     Toggle("Sunday Lunch", isOn: $isSundayLunch)
+                    Toggle("Featured", isOn: $isFeatured)
                 }
                 
                 Button("Update") {
@@ -781,12 +835,12 @@ struct EditListingView: View {
                     updatedListing.category = category
                     updatedListing.description = description
                     updatedListing.location = location
-                    updatedListing.isVegan = isVegan
                     updatedListing.isVeg = isVeg
                     updatedListing.isDog = isDog
                     updatedListing.isChild = isChild
                     updatedListing.isBrizPick = isBrizPick
                     updatedListing.isSundayLunch = isSundayLunch
+                    updatedListing.isFeatured = isFeatured
                     viewModel.updateListing(updatedListing)
                     dismiss()
                 }
@@ -822,121 +876,89 @@ struct ListingCardView: View {
         Button(action: {
             showingDetailView = true
         }) {
-            // White card
-            ZStack {
-                // White background
-                Color.white
-                    .cornerRadius(12)
-                
-                // Main content
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        // Category name at top left (replacing listing name)
-                        Text(listing.category.uppercased())
-                            .font(.subheadline)
-                            .fontWeight(.bold)
-                            .foregroundColor(Color.black)
-                        Spacer()
-                        
-                        // Other amenity symbols at top right
-                        HStack(spacing: 4) {
-                            // Briz Pick star
-                            if listing.isBrizPick ?? false {
-                                ListingStyling.brizPickCustomSymbol()
-                            }
-                            
-                            if listing.isVegan ?? false {
-                                ListingStyling.veganSymbol()
-                                    .foregroundColor(.black) 
-                            }
-                            if listing.isVeg ?? false {
-                                ListingStyling.vegSymbol()
-                                    .foregroundColor(.black)
-                            }
-                            if listing.isDog ?? false {
-                                ListingStyling.dogSymbol()
-                                    .foregroundColor(.black)
-                            }
-                            if listing.isChild ?? false {
-                                ListingStyling.childSymbol()
-                                    .foregroundColor(.black)
-                            }
-                            if listing.isSundayLunch ?? false {
-                                ListingStyling.sundayLunchSymbol()
-                                    .foregroundColor(.black)
-                            }
-                        }
-                    }
+            // Simple white card with direct content
+            VStack(alignment: .leading, spacing: 8) {
+                // Top row with category and symbols
+                HStack {
+                    // Category with symbol
+                    ListingStyling.categoryPill(listing.category)
                     
-                    // Divider line (kept as is)
-                    Divider()
-                        .padding(.top, 2)
-                        .padding(.bottom, 4)
-
-                    // Listing name now below the divider
-                    Text(listing.name)
-                        .font(.headline)
-                        .foregroundColor(.black)
-                        .padding(.bottom, 2)
-                    
-                    // Description (kept below listing name)
-                    if !listing.description.isEmpty {
-                        Text(listing.description)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .lineLimit(2)
-                    }
-
                     Spacer()
                     
-                    // Footer with location and action buttons
-                    HStack {
-                        // Location in bottom left (kept as is)
-                        HStack(spacing: 4) {
-                            Image(systemName: "location.circle.fill")
-                                .font(.caption2)
-                                .foregroundColor(Color.black)
-                                
-                            Text(listing.location.uppercased())
-                                .font(.caption2)
-                                .foregroundColor(Color.black)
+                    // Amenity symbols
+                    HStack(spacing: 4) {
+                        if listing.isFeatured ?? false { 
+                            ListingStyling.featuredSymbol() 
                         }
+                        if listing.isBrizPick ?? false { 
+                            ListingStyling.brizPickCustomSymbol() 
+                        }
+                        if listing.isVeg ?? false { ListingStyling.vegSymbol() }
+                        if listing.isDog ?? false { ListingStyling.dogSymbol() }
+                        if listing.isChild ?? false { ListingStyling.childSymbol() }
+                        if listing.isSundayLunch ?? false { ListingStyling.sundayLunchSymbol() }
+                    }
+                    .foregroundColor(.black)
+                }
+                
+                Divider()
+                
+                // Listing name
+                Text(listing.name)
+                    .font(.headline)
+                
+                // Description (if available)
+                if !listing.description.isEmpty {
+                    Text(listing.description)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                }
+                
+                Spacer()
+                
+                // Footer
+                HStack {
+                    // Location
+                    HStack(spacing: 4) {
+                        Image(systemName: "location.circle.fill")
+                            .font(.caption2)
                         
-                        Spacer()
-                        
-                        // Edit and delete buttons
-                        Button(action: {
-                            onEdit(listing)
-                        }) {
+                        Text(listing.location.uppercased())
+                            .font(.caption2)
+                    }
+                    .foregroundColor(.black)
+                    
+                    Spacer()
+                    
+                    // Action buttons
+                    HStack(spacing: 12) {
+                        Button(action: { onEdit(listing) }) {
                             Image(systemName: "pencil.circle")
                                 .font(.caption)
                                 .foregroundColor(.gray)
                         }
-
-                        Button(action: {
-                            onDelete(listing)
-                        }) {
+                        
+                        Button(action: { onDelete(listing) }) {
                             Image(systemName: "trash.circle")
                                 .font(.caption)
                                 .foregroundColor(.red)
                         }
                     }
                 }
-                .padding()
-                .frame(height: 160)
             }
+            .padding()
+            .frame(height: 160)
+            .background(Color.white)
+            .cornerRadius(12)
         }
         .buttonStyle(PlainButtonStyle())
         .contextMenu {
-            Button(action: {
-                onEdit(listing)
-            }) {
+            Button(action: { onEdit(listing) }) {
                 Label("Edit", systemImage: "pencil")
             }
             
-            Button(role: .destructive, action: {
-                onDelete(listing)
-            }) {
+            Button(role: .destructive, action: { onDelete(listing) }) {
                 Label("Delete", systemImage: "trash")
             }
         }
@@ -965,11 +987,6 @@ struct HeaderView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Background color for status bar area
-            Color(.systemGray6)
-                .frame(height: 0)
-                .ignoresSafeArea(edges: .top)
-            
             // Main header content
             HStack {
                 Text("Brizlist")
@@ -1095,6 +1112,55 @@ struct ListingsScrollView: View {
             }
             
             LazyVStack(spacing: 16) {
+                // Featured listings section
+                if !viewModel.featuredListings.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        // Featured section header with enhanced styling
+                        HStack {
+                            Image(systemName: "medal.fill")
+                                .foregroundColor(.orange)
+                                .font(.subheadline)
+                            
+                            Text("FEATURED")
+                                .font(.subheadline)
+                                .fontWeight(.bold)
+                                .foregroundColor(.black)
+                            
+                            Spacer()
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+                        .padding(.bottom, 8)
+                        
+                        // Featured listings
+                        ForEach(viewModel.featuredListings) { listing in
+                            ListingCardView(
+                                listing: listing,
+                                onEdit: { listingToEdit = $0 },
+                                onDelete: { viewModel.deleteListing($0) }
+                            )
+                            .padding(.horizontal)
+                            .onAppear {
+                                if listing.id == viewModel.featuredListings.last?.id 
+                                   && listing.id == viewModel.listings.last?.id {
+                                    viewModel.loadMoreListings()
+                                }
+                            }
+                        }
+                    }
+                    .padding(.bottom, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.blue.opacity(0.08)) // Very light blue background
+                            .padding(.horizontal, 8)
+                    )
+                    
+                    // Add a bit more space after the featured section
+                    Spacer()
+                        .frame(height: 12)
+                }
+                
+                // Regular listings
                 ForEach(viewModel.listings) { listing in
                     ListingCardView(
                         listing: listing,
@@ -1102,7 +1168,6 @@ struct ListingsScrollView: View {
                         onDelete: { viewModel.deleteListing($0) }
                     )
                     .padding(.horizontal)
-                    .buttonStyle(PlainButtonStyle())
                     .onAppear {
                         if listing.id == viewModel.listings.last?.id {
                             viewModel.loadMoreListings()
@@ -1110,6 +1175,7 @@ struct ListingsScrollView: View {
                     }
                 }
                 
+                // Loading indicator and end of list message
                 if viewModel.isLoadingMore {
                     ProgressView()
                         .padding()
@@ -1143,7 +1209,7 @@ struct FloatingAddButton: View {
                     Image(systemName: "plus")
                         .font(.headline)
                         .foregroundColor(.white)
-                        .frame(width: 50, height: 50)
+                        .frame(width: 30, height: 30)
                         .background(Color.blue)
                         .clipShape(Circle())
                         .shadow(radius: 4)

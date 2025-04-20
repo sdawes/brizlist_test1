@@ -17,6 +17,21 @@ struct ListingDetailView: View {
                 Text(listing.name)
                     .font(.title3.bold())
                 
+                HStack {
+                    Text(listing.category)
+                        .font(.caption)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.gray.opacity(0.2))
+                        .cornerRadius(4)
+                    
+                    if !listing.cuisine.isEmpty {
+                        Text(listing.cuisine)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
                 Text("A beloved local spot that's been serving Bristol for years. Known for their exceptional service and welcoming atmosphere, this place has become a cornerstone of the community.")
                     .font(.caption)
                 
@@ -67,6 +82,7 @@ struct ListingDetailView: View {
         id: "1",
         name: "The Bristol Lounge",
         category: "Restaurant",
+        cuisine: "Italian",
         description: "A cozy spot in the heart of Bristol",
         location: "Clifton, Bristol"
     ))

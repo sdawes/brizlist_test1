@@ -97,25 +97,60 @@ struct ListingStyling {
             .font(.caption)
     }
 
-    // MARK: - CATEGORY COLORS
+    
 
-    static func colorForCategory(_ category: String) -> Color {
+    // MARK: - Category Pill
+
+    static func categoryPill(_ category: String) -> some View {
+        let systemName: String
+        let color: Color
+        
         switch category.lowercased() {
         case "pub", "bar":
-            return Color(red: 0.82, green: 0.94, blue: 0.88) // #D0F0E0
+            systemName = "mug.fill"
+            color = Color(red: 0.13, green: 0.55, blue: 0.13) // Deep forest green
         case "restaurant", "bistro":
-            return Color(red: 0.95, green: 0.87, blue: 0.73) // Pastel orange/peach
+            systemName = "fork.knife"
+            color = Color(red: 0.75, green: 0.0, blue: 0.0) // Deep crimson red
         case "café", "cafe", "coffee shop":
-            return Color(red: 0.75, green: 0.89, blue: 0.97) // #BEE3F8 - Light blue
+            systemName = "cup.and.saucer.fill"
+            color = Color(red: 0.0, green: 0.35, blue: 0.65) // Rich navy blue
         case "bakery":
-            return Color(red: 0.95, green: 0.80, blue: 0.85) // Pastel pink
+            systemName = "birthday.cake.fill"
+            color = Color(red: 0.65, green: 0.16, blue: 0.43) // Deep magenta
         case "deli", "food market":
-            return Color(red: 0.75, green: 0.87, blue: 0.95) // Pastel blue
+            systemName = "basket.fill"
+            color = Color(red: 0.55, green: 0.27, blue: 0.07) // Rich brown
         case "takeaway", "fast food":
-            return Color(red: 1.0, green: 0.7, blue: 0.28) // #FFB347 - Pastel yellow/orange
+            systemName = "bag.fill"
+            color = Color(red: 0.85, green: 0.53, blue: 0.0) // Deep amber/orange
         default:
-            return Color.white // Default white for other categories
+            systemName = "mappin"
+            color = Color(red: 0.35, green: 0.35, blue: 0.35) // Dark charcoal
         }
+        
+        return HStack(spacing: 6) {
+            Image(systemName: systemName)
+                .font(.caption2)
+            
+            Text(category.uppercased())
+                .font(.caption2)
+                .fontWeight(.semibold)
+        }
+        .foregroundColor(.white)
+        .padding(.vertical, 4)
+        .padding(.horizontal, 8)
+        .background(
+            Capsule()
+                .fill(color)
+        )
+    }
+
+    // MARK: - Featured Symbol
+    static func featuredSymbol() -> some View {
+        Image(systemName: "medal.fill")
+            .font(.caption)
+            .foregroundColor(.orange) // Gold/orange color for the medal
     }
 
 }

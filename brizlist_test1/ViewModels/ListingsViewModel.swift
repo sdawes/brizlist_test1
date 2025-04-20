@@ -13,6 +13,7 @@ import SwiftUI
 class ListingsViewModel: ObservableObject {
     // MARK: - Properties
     @Published private(set) var listings: [Listing] = []
+    @Published private(set) var featuredListings: [Listing] = []
     @Published private(set) var isLoadingMore = false
     @Published private(set) var hasMoreListings = true
     @Published var errorMessage: String?
@@ -35,8 +36,8 @@ class ListingsViewModel: ObservableObject {
     let availableFilters: [FilterOption] = [
         FilterOption(field: "isBrizPick", displayName: "Briz Picks"),
         FilterOption(field: "isSundayLunch", displayName: "Sunday Lunch"),
-        FilterOption(field: "isVegan", displayName: "Vegan Friendly"),
         FilterOption(field: "isDog", displayName: "Dog Friendly"),
+        FilterOption(field: "isFeatured", displayName: "Featured"),
         // Add more filters as needed
     ]
     
@@ -131,6 +132,7 @@ class ListingsViewModel: ObservableObject {
     
     private func resetPaginationState() {
         listings = []
+        featuredListings = []
         lastDocument = nil
         hasMoreListings = true
     }
@@ -162,6 +164,7 @@ class ListingsViewModel: ObservableObject {
             hasMoreListings = false
             if isInitialFetch {
                 listings = []
+                featuredListings = []
             }
             return
         }
@@ -171,10 +174,14 @@ class ListingsViewModel: ObservableObject {
         
         let newListings = documents.compactMap(createListingFromDocument)
         
+        let (featured, regular) = separateFeaturedListings(newListings)
+        
         if isInitialFetch {
-            listings = newListings
+            featuredListings = featured
+            listings = regular
         } else {
-            listings.append(contentsOf: newListings)
+            featuredListings.append(contentsOf: featured)
+            listings.append(contentsOf: regular)
         }
     }
     
@@ -184,14 +191,15 @@ class ListingsViewModel: ObservableObject {
             id: document.documentID,
             name: data["name"] as? String ?? "",
             category: data["category"] as? String ?? "",
+            cuisine: data["cuisine"] as? String ?? "",
             description: data["description"] as? String ?? "",
             location: data["location"] as? String ?? "",
             isBrizPick: data["isBrizPick"] as? Bool,
-            isVegan: data["isVegan"] as? Bool,
             isVeg: data["isVeg"] as? Bool,
             isDog: data["isDog"] as? Bool,
             isChild: data["isChild"] as? Bool,
-            isSundayLunch: data["isSundayLunch"] as? Bool
+            isSundayLunch: data["isSundayLunch"] as? Bool,
+            isFeatured: data["isFeatured"] as? Bool
         )
     }
     
@@ -199,16 +207,17 @@ class ListingsViewModel: ObservableObject {
         var data: [String: Any] = [
             "name": listing.name,
             "category": listing.category,
+            "cuisine": listing.cuisine,
             "description": listing.description,
             "location": listing.location
         ]
         
         if let isBrizPick = listing.isBrizPick { data["isBrizPick"] = isBrizPick }
-        if let isVegan = listing.isVegan { data["isVegan"] = isVegan }
         if let isVeg = listing.isVeg { data["isVeg"] = isVeg }
         if let isDog = listing.isDog { data["isDog"] = isDog }
         if let isChild = listing.isChild { data["isChild"] = isChild }
         if let isSundayLunch = listing.isSundayLunch { data["isSundayLunch"] = isSundayLunch }
+        if let isFeatured = listing.isFeatured { data["isFeatured"] = isFeatured }
         
         return data
     }
@@ -219,5 +228,20 @@ class ListingsViewModel: ObservableObject {
             showError = true
             print("❌ \(message): \(error)")
         }
+    }
+    
+    private func separateFeaturedListings(_ listings: [Listing]) -> (featured: [Listing], regular: [Listing]) {
+        var featured: [Listing] = []
+        var regular: [Listing] = []
+        
+        for listing in listings {
+            if listing.isFeatured == true {
+                featured.append(listing)
+            } else {
+                regular.append(listing)
+            }
+        }
+        
+        return (featured, regular)
     }
 }
