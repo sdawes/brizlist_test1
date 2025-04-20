@@ -64,37 +64,42 @@ struct ListingStyling {
     
     static func brizPickCustomSymbol() -> some View {
         Image(systemName: "star.fill")
-            .font(.caption)
-            .foregroundColor(.black)
+            .font(.system(size: 12))
+            .foregroundColor(.white)
     }
 
     // MARK: - Amenity Symbols
     
     static func veganSymbol() -> some View {
         Image(systemName: "carrot.fill")
-            .font(.caption)
+            .font(.system(size: 12))
+            .foregroundColor(.white)
     }
     
     static func vegSymbol() -> some View {
         Image(systemName: "leaf.fill")
-            .font(.caption)
+            .font(.system(size: 12))
+            .foregroundColor(.white)
     }
     
     static func dogSymbol() -> some View {
         Image(systemName: "pawprint.fill")
-            .font(.caption)
+            .font(.system(size: 12))
+            .foregroundColor(.white)
     }
     
     static func childSymbol() -> some View {
         Image(systemName: "figure.2.and.child.holdinghands")
-            .font(.caption)
+            .font(.system(size: 12))
+            .foregroundColor(.white)
     }
 
     // MARK: - Sunday Lunch Symbol
     
     static func sundayLunchSymbol() -> some View {
         Image(systemName: "oven.fill")
-            .font(.caption)
+            .font(.system(size: 12))
+            .foregroundColor(.white)
     }
 
     
@@ -149,8 +154,8 @@ struct ListingStyling {
     // MARK: - Featured Symbol
     static func featuredSymbol() -> some View {
         Image(systemName: "medal.fill")
-            .font(.caption)
-            .foregroundColor(.orange) // Gold/orange color for the medal
+            .font(.system(size: 12))
+            .foregroundColor(.white)
     }
 
 }
