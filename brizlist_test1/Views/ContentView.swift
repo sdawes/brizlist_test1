@@ -10,8 +10,6 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var viewModel = ListingsViewModel()
-    @State private var showingAddListing = false
-    @State private var listingToEdit: Listing?
     
     var body: some View {
         ZStack {
@@ -22,20 +20,11 @@ struct ContentView: View {
             // Main content
             VStack(spacing: 0) {
                 HeaderView(viewModel: viewModel)
-                ListingsScrollView(viewModel: viewModel, listingToEdit: $listingToEdit)
+                ListingsScrollView(viewModel: viewModel)
             }
-            
-            // Floating add button
-            FloatingAddButton(showingAddListing: $showingAddListing)
         }
         .onAppear {
             viewModel.fetchListings()
-        }
-        .sheet(isPresented: $showingAddListing) {
-            AddListingView(viewModel: viewModel)
-        }
-        .sheet(item: $listingToEdit) { listing in
-            EditListingView(viewModel: viewModel, listing: listing)
         }
         .alert("Error", isPresented: $viewModel.showError, presenting: viewModel.errorMessage) { _ in
             Button("OK") {
@@ -50,7 +39,6 @@ struct ContentView: View {
 // Extracted ScrollView into a separate view
 struct ListingsScrollView: View {
     @ObservedObject var viewModel: ListingsViewModel
-    @Binding var listingToEdit: Listing?
     
     var body: some View {
         ScrollView {
@@ -82,14 +70,11 @@ struct ListingsScrollView: View {
                         // Featured listings
                         ForEach(viewModel.featuredListings) { listing in
                             ListingCardView(
-                                listing: listing,
-                                onEdit: { listingToEdit = $0 },
-                                onDelete: { viewModel.deleteListing($0) }
+                                listing: listing
                             )
                             .padding(.horizontal)
                             .onAppear {
-                                if listing.id == viewModel.featuredListings.last?.id 
-                                   && listing.id == viewModel.listings.last?.id {
+                                if listing.id == viewModel.featuredListings.last?.id {
                                     viewModel.loadMoreListings()
                                 }
                             }
@@ -110,9 +95,7 @@ struct ListingsScrollView: View {
                 // Regular listings
                 ForEach(viewModel.listings) { listing in
                     ListingCardView(
-                        listing: listing,
-                        onEdit: { listingToEdit = $0 },
-                        onDelete: { viewModel.deleteListing($0) }
+                        listing: listing
                     )
                     .padding(.horizontal)
                     .onAppear {
@@ -138,33 +121,6 @@ struct ListingsScrollView: View {
             .padding(.bottom, 80)
         }
         .coordinateSpace(name: "refresh")
-    }
-}
-
-// Extracted Floating Add Button
-struct FloatingAddButton: View {
-    @Binding var showingAddListing: Bool
-    
-    var body: some View {
-        VStack {
-            Spacer()
-            HStack {
-                Spacer()
-                Button {
-                    showingAddListing = true
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(width: 30, height: 30)
-                        .background(Color.blue)
-                        .clipShape(Circle())
-                        .shadow(radius: 4)
-                }
-                .padding(.trailing, 20)
-                .padding(.bottom, 20)
-            }
-        }
     }
 }
 

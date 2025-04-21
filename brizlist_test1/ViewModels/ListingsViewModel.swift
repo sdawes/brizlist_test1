@@ -73,38 +73,6 @@ class ListingsViewModel: ObservableObject {
         fetchData(query: query, isInitialFetch: false)
     }
     
-    func addListing(_ listing: Listing) {
-        db.collection("listings").document().setData(
-            createListingData(from: listing)
-        ) { [weak self] error in
-            self?.handleFirestoreError(error, message: "Error adding listing")
-        }
-    }
-    
-    func updateListing(_ listing: Listing) {
-        guard let id = listing.id else {
-            handleFirestoreError(NSError(domain: "", code: -1), message: "Missing listing ID")
-            return
-        }
-        
-        db.collection("listings").document(id).updateData(
-            createListingData(from: listing)
-        ) { [weak self] error in
-            self?.handleFirestoreError(error, message: "Error updating listing")
-        }
-    }
-    
-    func deleteListing(_ listing: Listing) {
-        guard let id = listing.id else {
-            handleFirestoreError(NSError(domain: "", code: -1), message: "Missing listing ID")
-            return
-        }
-        
-        db.collection("listings").document(id).delete { [weak self] error in
-            self?.handleFirestoreError(error, message: "Error deleting listing")
-        }
-    }
-
     // Helper to check if any filters are active
     var hasActiveFilters: Bool {
         activeFilterValues.values.contains(true)
@@ -201,25 +169,6 @@ class ListingsViewModel: ObservableObject {
             isSundayLunch: data["isSundayLunch"] as? Bool,
             isFeatured: data["isFeatured"] as? Bool
         )
-    }
-    
-    private func createListingData(from listing: Listing) -> [String: Any] {
-        var data: [String: Any] = [
-            "name": listing.name,
-            "category": listing.category,
-            "cuisine": listing.cuisine,
-            "description": listing.description,
-            "location": listing.location
-        ]
-        
-        if let isBrizPick = listing.isBrizPick { data["isBrizPick"] = isBrizPick }
-        if let isVeg = listing.isVeg { data["isVeg"] = isVeg }
-        if let isDog = listing.isDog { data["isDog"] = isDog }
-        if let isChild = listing.isChild { data["isChild"] = isChild }
-        if let isSundayLunch = listing.isSundayLunch { data["isSundayLunch"] = isSundayLunch }
-        if let isFeatured = listing.isFeatured { data["isFeatured"] = isFeatured }
-        
-        return data
     }
     
     private func handleFirestoreError(_ error: Error?, message: String) {

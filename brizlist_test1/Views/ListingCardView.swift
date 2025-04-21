@@ -9,8 +9,6 @@ import SwiftUI
 
 struct ListingCardView: View {
     let listing: Listing
-    let onEdit: (Listing) -> Void
-    let onDelete: (Listing) -> Void
     @State private var showingDetailView = false
     
     var body: some View {
@@ -76,50 +74,21 @@ struct ListingCardView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .zIndex(1)
                 
-                // Floating image box - aligned with category
+                // Floating image box - vertically centered
                 Image("tacos")
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 120, height: 120)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
-                    .padding(.top, 12) // Same as category top padding
                     .padding(.trailing, 12)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
                     .zIndex(2)
-                
-                // Action buttons positioned under the image
-                HStack(spacing: 12) {
-                    Button(action: { onEdit(listing) }) {
-                        Image(systemName: "pencil.circle")
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                    }
-                    
-                    Button(action: { onDelete(listing) }) {
-                        Image(systemName: "trash.circle")
-                            .font(.caption)
-                            .foregroundColor(.red)
-                    }
-                }
-                .padding(.trailing, 12)
-                .padding(.top, 137) // Position below the image (image height 120 + top padding 12 + extra 5)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .zIndex(3)
             }
             .frame(height: 160)
             .background(Color.white)
             .cornerRadius(12)
         }
         .buttonStyle(PlainButtonStyle())
-        .contextMenu {
-            Button(action: { onEdit(listing) }) {
-                Label("Edit", systemImage: "pencil")
-            }
-            
-            Button(role: .destructive, action: { onDelete(listing) }) {
-                Label("Delete", systemImage: "trash")
-            }
-        }
         .sheet(isPresented: $showingDetailView) {
             NavigationView {
                 ListingDetailView(listing: listing)
