@@ -155,6 +155,7 @@ class ListingsViewModel: ObservableObject {
     
     private func createListingFromDocument(_ document: QueryDocumentSnapshot) -> Listing? {
         let data = document.data()
+        
         return Listing(
             id: document.documentID,
             name: data["name"] as? String ?? "",
@@ -162,6 +163,7 @@ class ListingsViewModel: ObservableObject {
             cuisine: data["cuisine"] as? String ?? "",
             description: data["description"] as? String ?? "",
             location: data["location"] as? String ?? "",
+            imageUrl: data["imageUrl"] as? String,
             isBrizPick: data["isBrizPick"] as? Bool,
             isVeg: data["isVeg"] as? Bool,
             isDog: data["isDog"] as? Bool,
@@ -175,7 +177,6 @@ class ListingsViewModel: ObservableObject {
         if let error = error {
             errorMessage = "\(message): \(error.localizedDescription)"
             showError = true
-            print("❌ \(message): \(error)")
         }
     }
     

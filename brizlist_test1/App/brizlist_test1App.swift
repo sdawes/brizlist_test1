@@ -30,9 +30,6 @@ struct BrizlistApp: App {
         
         // Apply the settings to Firestore
         Firestore.firestore().settings = settings
-        
-        // Debug: Confirm Firebase SDK version
-        print("Firebase SDK Version: \(FirebaseVersion())")
     }
     
     var body: some Scene {

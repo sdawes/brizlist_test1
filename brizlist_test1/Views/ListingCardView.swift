@@ -75,9 +75,7 @@ struct ListingCardView: View {
                 .zIndex(1)
                 
                 // Floating image box - vertically centered
-                Image("tacos")
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
+                RemoteImage(url: listing.imageUrl)
                     .frame(width: 120, height: 120)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                     .padding(.trailing, 12)
