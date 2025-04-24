@@ -10,6 +10,8 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var viewModel = ListingsViewModel()
+    @State private var showingFilterSheet = false
+    @State private var showingAboutSheet = false
     
     var body: some View {
         ZStack {
@@ -19,8 +21,18 @@ struct ContentView: View {
 
             // Main content
             VStack(spacing: 0) {
-                HeaderView(viewModel: viewModel)
-                ListingsScrollView(viewModel: viewModel)
+                // Header
+                HeaderView(
+                    viewModel: viewModel,
+                    onFilterTap: { showingFilterSheet = true },
+                    onAboutTap: { showingAboutSheet = true }
+                )
+                
+                // Main scrolling content
+                ListingsScrollView(
+                    viewModel: viewModel,
+                    onFilterTap: { showingFilterSheet = true }
+                )
             }
         }
         .onAppear {
@@ -33,12 +45,23 @@ struct ContentView: View {
         } message: { errorMessage in
             Text(errorMessage)
         }
+        .sheet(isPresented: $showingFilterSheet, content: {
+            FilterSheetView(viewModel: viewModel)
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        })
+        .sheet(isPresented: $showingAboutSheet, content: {
+            AboutSheetView()
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        })
     }
 }
 
 // Extracted ScrollView into a separate view
 struct ListingsScrollView: View {
     @ObservedObject var viewModel: ListingsViewModel
+    var onFilterTap: () -> Void
     
     var body: some View {
         ScrollView {
@@ -103,6 +126,62 @@ struct ListingsScrollView: View {
                             viewModel.loadMoreListings()
                         }
                     }
+                }
+                
+                // No results message when filtering results in no matches
+                if viewModel.noResultsFromFiltering {
+                    VStack(spacing: 16) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 40))
+                            .foregroundColor(.gray)
+                            .padding(.bottom, 8)
+                        
+                        Text("No listings match all your filters")
+                            .font(.headline)
+                            .foregroundColor(.gray)
+                        
+                        Text("Try selecting fewer filters or a different combination")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+                        
+                        if !viewModel.selectedTags.isEmpty {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Selected tags:")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                                
+                                HStack {
+                                    ForEach(Array(viewModel.selectedTags), id: \.self) { tag in
+                                        Text(tag.capitalized)
+                                            .font(.caption)
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 4)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .fill(Color.blue.opacity(0.7))
+                                            )
+                                    }
+                                }
+                            }
+                            .padding(.top, 4)
+                        }
+                        
+                        Button("Adjust Filters") {
+                            // This will open the filter sheet
+                            onFilterTap()
+                        }
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 16)
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                        .padding(.top, 8)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 40)
                 }
                 
                 // Loading indicator and end of list message

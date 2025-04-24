@@ -18,6 +18,8 @@ class ListingsViewModel: ObservableObject {
     @Published private(set) var hasMoreListings = true
     @Published var errorMessage: String?
     @Published var showError: Bool = false
+    @Published var selectedTags: Set<String> = []
+    @Published var noResultsFromFiltering: Bool = false
     
     private let db = Firestore.firestore()
     private let pageSize = 20
@@ -73,41 +75,14 @@ class ListingsViewModel: ObservableObject {
         fetchData(query: query, isInitialFetch: false)
     }
     
-    func addListing(_ listing: Listing) {
-        db.collection("listings").document().setData(
-            createListingData(from: listing)
-        ) { [weak self] error in
-            self?.handleFirestoreError(error, message: "Error adding listing")
-        }
-    }
-    
-    func updateListing(_ listing: Listing) {
-        guard let id = listing.id else {
-            handleFirestoreError(NSError(domain: "", code: -1), message: "Missing listing ID")
-            return
-        }
-        
-        db.collection("listings").document(id).updateData(
-            createListingData(from: listing)
-        ) { [weak self] error in
-            self?.handleFirestoreError(error, message: "Error updating listing")
-        }
-    }
-    
-    func deleteListing(_ listing: Listing) {
-        guard let id = listing.id else {
-            handleFirestoreError(NSError(domain: "", code: -1), message: "Missing listing ID")
-            return
-        }
-        
-        db.collection("listings").document(id).delete { [weak self] error in
-            self?.handleFirestoreError(error, message: "Error deleting listing")
-        }
-    }
-
     // Helper to check if any filters are active
     var hasActiveFilters: Bool {
         activeFilterValues.values.contains(true)
+    }
+    
+    // Add this helper property to check if tag filtering is active
+    var hasTagFilters: Bool {
+        return !selectedTags.isEmpty
     }
     
     // MARK: - Private Helpers
@@ -118,9 +93,23 @@ class ListingsViewModel: ObservableObject {
     }
     
     private func createBaseQuery() -> Query {
-        var query = db.collection("listings").order(by: "name")
+        // Start with CollectionReference and then convert to Query
+        let collectionRef = db.collection("listings")
+        var query: Query = collectionRef.order(by: "name")
         
-        // Apply all active filters
+        // Filter by tags if any are selected
+        if !selectedTags.isEmpty {
+            // For "AND" tag filtering, we need to check that each document contains all selected tags
+            // We'll use multiple array-contains queries in combination with filter client-side
+            
+            // Start with the first tag (we need at least one in the Firestore query)
+            let tagsArray = Array(selectedTags)
+            query = query.whereField("tags", arrayContains: tagsArray[0])
+            
+            // We'll need to filter the rest of the tags client-side in processQueryResults
+        }
+        
+        // Apply all other active filters (your existing code)
         for (field, isActive) in activeFilterValues {
             if isActive {
                 query = query.whereField(field, isEqualTo: true)
@@ -160,19 +149,65 @@ class ListingsViewModel: ObservableObject {
             return
         }
         
-        guard let documents = snapshot?.documents, !documents.isEmpty else {
+        // Check if we have any filters active 
+        let hasActiveFilters = self.hasActiveFilters || self.hasTagFilters
+        
+        guard let documents = snapshot?.documents else {
             hasMoreListings = false
             if isInitialFetch {
                 listings = []
                 featuredListings = []
+                
+                // Set the noResultsFromFiltering flag if we have filters but no results
+                noResultsFromFiltering = hasActiveFilters
             }
             return
         }
         
-        lastDocument = documents.last
+        // Additional client-side filtering if we have multiple tags
+        // (Firestore can only query for one array-contains at a time)
+        var filteredDocuments = documents
+        if selectedTags.count > 1 {
+            let allTags = Array(selectedTags)
+            // Skip the first tag as it was already filtered in the query
+            let additionalTags = allTags.dropFirst()
+            
+            // Filter documents to contain ALL the selected tags (AND operation)
+            filteredDocuments = documents.filter { document in
+                guard let documentTags = document.data()["tags"] as? [String] else {
+                    return false
+                }
+                
+                // Check that all additional tags are present in the document
+                for tag in additionalTags {
+                    if !documentTags.contains(tag) {
+                        return false
+                    }
+                }
+                return true
+            }
+        }
+        
+        // Check if we have results after client-side filtering
+        if filteredDocuments.isEmpty {
+            hasMoreListings = false
+            if isInitialFetch {
+                listings = []
+                featuredListings = []
+                
+                // Set the noResultsFromFiltering flag
+                noResultsFromFiltering = hasActiveFilters
+            }
+            return
+        }
+        
+        // Found results, so reset the no results flag
+        noResultsFromFiltering = false
+        
+        lastDocument = documents.last // Keep the original last document for pagination
         hasMoreListings = documents.count >= pageSize
         
-        let newListings = documents.compactMap(createListingFromDocument)
+        let newListings = filteredDocuments.compactMap(createListingFromDocument)
         
         let (featured, regular) = separateFeaturedListings(newListings)
         
@@ -187,12 +222,15 @@ class ListingsViewModel: ObservableObject {
     
     private func createListingFromDocument(_ document: QueryDocumentSnapshot) -> Listing? {
         let data = document.data()
+        
         return Listing(
             id: document.documentID,
             name: data["name"] as? String ?? "",
-            category: data["category"] as? String ?? "",
+            tags: data["tags"] as? [String] ?? [],
+            cuisine: data["cuisine"] as? String ?? "",
             description: data["description"] as? String ?? "",
             location: data["location"] as? String ?? "",
+            imageUrl: data["imageUrl"] as? String,
             isBrizPick: data["isBrizPick"] as? Bool,
             isVeg: data["isVeg"] as? Bool,
             isDog: data["isDog"] as? Bool,
@@ -202,29 +240,10 @@ class ListingsViewModel: ObservableObject {
         )
     }
     
-    private func createListingData(from listing: Listing) -> [String: Any] {
-        var data: [String: Any] = [
-            "name": listing.name,
-            "category": listing.category,
-            "description": listing.description,
-            "location": listing.location
-        ]
-        
-        if let isBrizPick = listing.isBrizPick { data["isBrizPick"] = isBrizPick }
-        if let isVeg = listing.isVeg { data["isVeg"] = isVeg }
-        if let isDog = listing.isDog { data["isDog"] = isDog }
-        if let isChild = listing.isChild { data["isChild"] = isChild }
-        if let isSundayLunch = listing.isSundayLunch { data["isSundayLunch"] = isSundayLunch }
-        if let isFeatured = listing.isFeatured { data["isFeatured"] = isFeatured }
-        
-        return data
-    }
-    
     private func handleFirestoreError(_ error: Error?, message: String) {
         if let error = error {
             errorMessage = "\(message): \(error.localizedDescription)"
             showError = true
-            print("❌ \(message): \(error)")
         }
     }
     
@@ -241,6 +260,112 @@ class ListingsViewModel: ObservableObject {
         }
         
         return (featured, regular)
+    }
+    
+    // Add these methods to manage tag selection
+    func selectTag(_ tag: String) {
+        selectedTags.insert(tag)
+        fetchListings() // Refresh listings with the new filter
+    }
+
+    func deselectTag(_ tag: String) {
+        selectedTags.remove(tag)
+        fetchListings() // Refresh listings with the new filter
+    }
+
+    func toggleTag(_ tag: String) {
+        if selectedTags.contains(tag) {
+            selectedTags.remove(tag)
+        } else {
+            selectedTags.insert(tag)
+        }
+        fetchListings() // Refresh listings with the new filter
+    }
+
+    func clearTagFilters() {
+        selectedTags.removeAll()
+        fetchListings() // Refresh listings with the new filter
+    }
+
+    // You can also add this method to get all unique tags from current listings
+    func getAllUniqueTags() -> [String] {
+        var allTags = Set<String>()
+        
+        // Collect tags from all listings
+        for listing in listings {
+            allTags.formUnion(listing.tags)
+        }
+        
+        for listing in featuredListings {
+            allTags.formUnion(listing.tags)
+        }
+        
+        return Array(allTags).sorted()
+    }
+
+    // Add a new method to check if a filter combination would yield results
+    func wouldFiltersYieldResults(tags: Set<String>, amenities: [String: Bool]) -> Bool {
+        // If no filters selected, we'll have results
+        if tags.isEmpty && !amenities.values.contains(true) {
+            return true
+        }
+        
+        // Create a base query - start with CollectionReference and then convert to Query
+        let collectionRef = db.collection("listings")
+        var query: Query = collectionRef
+        
+        // Apply amenity filters (AND operation - must match all)
+        for (field, isActive) in amenities {
+            if isActive {
+                query = query.whereField(field, isEqualTo: true)
+            }
+        }
+        
+        // For tags, we need to handle the AND operation differently
+        // We'll do the first tag in Firestore and the rest client-side
+        if !tags.isEmpty {
+            let tagsArray = Array(tags)
+            query = query.whereField("tags", arrayContains: tagsArray[0])
+        }
+        
+        // Use a semaphore to make this synchronous
+        let semaphore = DispatchSemaphore(value: 0)
+        var hasResults = false
+        
+        query.limit(to: 20).getDocuments { snapshot, error in
+            if let documents = snapshot?.documents {
+                // If we have multiple tags, filter client-side to ensure all tags match
+                if tags.count > 1 {
+                    let allTags = Array(tags)
+                    let additionalTags = allTags.dropFirst() // Skip first tag (already filtered)
+                    
+                    // Check for documents with ALL the selected tags
+                    let matchingDocs = documents.filter { document in
+                        guard let documentTags = document.data()["tags"] as? [String] else {
+                            return false
+                        }
+                        
+                        // Document must contain ALL additional tags
+                        for tag in additionalTags {
+                            if !documentTags.contains(tag) {
+                                return false
+                            }
+                        }
+                        return true
+                    }
+                    
+                    hasResults = !matchingDocs.isEmpty
+                } else {
+                    // If just one tag or no tags, the Firestore query is sufficient
+                    hasResults = !documents.isEmpty
+                }
+            }
+            semaphore.signal()
+        }
+        
+        // Wait for the result
+        _ = semaphore.wait(timeout: .now() + 2.0)
+        return hasResults
     }
 }
 //
@@ -275,9 +400,6 @@ struct BrizlistApp: App {
         
         // Apply the settings to Firestore
         Firestore.firestore().settings = settings
-        
-        // Debug: Confirm Firebase SDK version
-        print("Firebase SDK Version: \(FirebaseVersion())")
     }
     
     var body: some Scene {
@@ -299,9 +421,11 @@ import FirebaseFirestore
 struct Listing: Identifiable, Codable {
     @DocumentID var id: String? // Optional because Firebase generates this automatically
     var name: String
-    var category: String
+    var tags: [String]
+    var cuisine: String // Changed from subCategory to cuisine
     var description: String
     var location: String
+    var imageUrl: String? // Changed from imageURL to imageUrl to match Firestore field name
     var isBrizPick: Bool?
     var isVeg: Bool?
     var isDog: Bool?
@@ -309,13 +433,21 @@ struct Listing: Identifiable, Codable {
     var isSundayLunch: Bool?
     var isFeatured: Bool?
     
+    // Helper to get a displayable URL
+    var displayImageUrl: URL? {
+        guard let urlString = imageUrl else { return nil }
+        return URL(string: urlString)
+    }
+    
     // Updated initializer with consistent required/optional parameters
-    init(id: String? = nil, name: String, category: String, description: String, location: String, isBrizPick: Bool? = nil, isVeg: Bool? = nil, isDog: Bool? = nil, isChild: Bool? = nil, isSundayLunch: Bool? = nil, isFeatured: Bool? = nil) {
+    init(id: String? = nil, name: String, tags: [String] = [], cuisine: String = "", description: String, location: String, imageUrl: String? = nil, isBrizPick: Bool? = nil, isVeg: Bool? = nil, isDog: Bool? = nil, isChild: Bool? = nil, isSundayLunch: Bool? = nil, isFeatured: Bool? = nil) {
         self.id = id
         self.name = name
-        self.category = category
+        self.tags = tags
+        self.cuisine = cuisine
         self.description = description
         self.location = location
+        self.imageUrl = imageUrl
         self.isBrizPick = isBrizPick
         self.isVeg = isVeg
         self.isDog = isDog
@@ -325,6 +457,473 @@ struct Listing: Identifiable, Codable {
     }
 }
 //
+//  ImageCache.swift
+//  brizlist_test1
+//
+//  Created by Stephen Dawes on 03/05/2025.
+//
+
+import Foundation
+import SwiftUI
+import Combine
+
+// Helper for file operations outside the actor
+class ImageDiskCache {
+    static let shared = ImageDiskCache()
+    
+    private let fileManager = FileManager.default
+    private let cacheDirectory: URL
+    
+    private init() {
+        // Set up persistent cache directory
+        let cachesDirectory = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first!
+        cacheDirectory = cachesDirectory.appendingPathComponent("ImageCache", isDirectory: true)
+        
+        // Create cache directory if it doesn't exist
+        if !fileManager.fileExists(atPath: cacheDirectory.path) {
+            do {
+                try fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+            } catch {
+                print("Error creating cache directory: \(error)")
+            }
+        }
+    }
+    
+    // Get the file URL for a given image URL
+    func cacheFileURL(for url: URL) -> URL {
+        let fileName = url.absoluteString.hash.description
+        return cacheDirectory.appendingPathComponent(fileName)
+    }
+    
+    // Load image from disk
+    func loadImageFromDisk(for url: URL) -> UIImage? {
+        let cacheFileURL = cacheFileURL(for: url)
+        
+        guard fileManager.fileExists(atPath: cacheFileURL.path) else {
+            return nil
+        }
+        
+        do {
+            let data = try Data(contentsOf: cacheFileURL)
+            return UIImage(data: data)
+        } catch {
+            print("Error loading image from disk: \(error)")
+            return nil
+        }
+    }
+    
+    // Save image to disk
+    func saveImageToDisk(_ image: UIImage, for url: URL) {
+        let cacheFileURL = cacheFileURL(for: url)
+        
+        guard let data = image.jpegData(compressionQuality: 0.8) else {
+            return
+        }
+        
+        do {
+            try data.write(to: cacheFileURL)
+        } catch {
+            print("Error saving image to disk: \(error)")
+        }
+    }
+    
+    // Clean up old cache files (older than 7 days)
+    func cleanOldCacheFiles() {
+        do {
+            let fileURLs = try fileManager.contentsOfDirectory(
+                at: cacheDirectory,
+                includingPropertiesForKeys: [.creationDateKey]
+            )
+            
+            let sevenDaysAgo = Date().addingTimeInterval(-7 * 24 * 60 * 60)
+            
+            for fileURL in fileURLs {
+                if let attributes = try? fileManager.attributesOfItem(atPath: fileURL.path),
+                   let creationDate = attributes[.creationDate] as? Date,
+                   creationDate < sevenDaysAgo {
+                    try? fileManager.removeItem(at: fileURL)
+                }
+            }
+        } catch {
+            print("Error cleaning old cache files: \(error)")
+        }
+    }
+    
+    // Clear all cached files
+    func clearDiskCache() {
+        do {
+            let fileURLs = try fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: nil)
+            for fileURL in fileURLs {
+                try fileManager.removeItem(at: fileURL)
+            }
+        } catch {
+            print("Error clearing image cache: \(error)")
+        }
+    }
+}
+
+actor ImageCacheStore {
+    private let cache = NSCache<NSString, UIImage>()
+    private var loadingTasks: [URL: Task<UIImage?, Error>] = [:]
+    
+    init() {
+        // Configure NSCache
+        cache.countLimit = 100  // Maximum number of cached images
+        cache.totalCostLimit = 50 * 1024 * 1024  // 50MB limit
+    }
+    
+    func getExistingTask(for url: URL) -> Task<UIImage?, Error>? {
+        return loadingTasks[url]
+    }
+    
+    func storeTask(_ task: Task<UIImage?, Error>, for url: URL) {
+        loadingTasks[url] = task
+    }
+    
+    func removeTask(for url: URL) {
+        loadingTasks[url] = nil
+    }
+    
+    func getFromMemoryCache(for key: NSString) -> UIImage? {
+        return cache.object(forKey: key)
+    }
+    
+    func storeInMemoryCache(_ image: UIImage, for key: NSString) {
+        cache.setObject(image, forKey: key)
+    }
+    
+    func clearMemoryCache() {
+        cache.removeAllObjects()
+    }
+}
+
+class ImageCache {
+    static let shared = ImageCache()
+    private let store = ImageCacheStore()
+    private let diskCache = ImageDiskCache.shared
+    
+    private init() {
+        // Start cleaning old files
+        Task {
+            diskCache.cleanOldCacheFiles()
+        }
+    }
+    
+    // Get image from cache or load it
+    func image(for url: URL) async -> UIImage? {
+        // Check memory cache first
+        let key = url.absoluteString as NSString
+        if let cachedImage = await store.getFromMemoryCache(for: key) {
+            print("📂 Using memory cached image for: \(url.absoluteString)")
+            return cachedImage
+        }
+        
+        // Check disk cache
+        let diskCachedImage = diskCache.loadImageFromDisk(for: url)
+        if let diskCachedImage = diskCachedImage {
+            print("💾 Using disk cached image for: \(url.absoluteString)")
+            // Store in memory cache
+            await store.storeInMemoryCache(diskCachedImage, for: key)
+            return diskCachedImage
+        }
+        
+        // If task already exists, use that instead of starting a new one
+        if let existingTask = await store.getExistingTask(for: url) {
+            print("⏳ Using existing download task for: \(url.absoluteString)")
+            return try? await existingTask.value
+        }
+        
+        print("🌐 Downloading image from: \(url.absoluteString)")
+        
+        // Create new download task with retry logic
+        let task = Task<UIImage?, Error> {
+            defer {
+                Task {
+                    await store.removeTask(for: url)
+                }
+            }
+            
+            // Try up to 3 times with exponential backoff
+            for attempt in 1...3 {
+                do {
+                    let (data, response) = try await URLSession.shared.data(from: url)
+                    
+                    // Check if we got a valid HTTP response
+                    if let httpResponse = response as? HTTPURLResponse,
+                       !(200...299).contains(httpResponse.statusCode) {
+                        print("⚠️ HTTP error \(httpResponse.statusCode) for \(url.absoluteString)")
+                        if attempt < 3 {
+                            // Wait before retrying (exponential backoff)
+                            try await Task.sleep(nanoseconds: UInt64(pow(2.0, Double(attempt))) * 1_000_000_000)
+                            continue
+                        }
+                        return nil
+                    }
+                    
+                    guard let image = UIImage(data: data) else {
+                        print("❌ Invalid image data received for: \(url.absoluteString)")
+                        return nil
+                    }
+                    
+                    print("✅ Successfully downloaded image: \(url.absoluteString)")
+                    
+                    // Save to memory cache
+                    await store.storeInMemoryCache(image, for: key)
+                    
+                    // Save to disk cache on a background thread
+                    Task.detached(priority: .background) {
+                        ImageDiskCache.shared.saveImageToDisk(image, for: url)
+                    }
+                    
+                    return image
+                } catch {
+                    print("❌ Attempt \(attempt): Failed to load image \(url.absoluteString): \(error.localizedDescription)")
+                    
+                    if attempt < 3 {
+                        // Wait before retrying (exponential backoff)
+                        do {
+                            let delaySeconds = pow(2.0, Double(attempt))
+                            print("⏱️ Retrying in \(delaySeconds) seconds...")
+                            try await Task.sleep(nanoseconds: UInt64(delaySeconds * 1_000_000_000))
+                        } catch {
+                            // Ignore sleep errors (task cancellation)
+                        }
+                    } else {
+                        print("❌ Failed after 3 attempts for: \(url.absoluteString)")
+                        return nil
+                    }
+                }
+            }
+            
+            return nil
+        }
+        
+        // Store task
+        await store.storeTask(task, for: url)
+        
+        // Wait for task to complete
+        return try? await task.value
+    }
+    
+    // Clear all cached images
+    func clearCache() async {
+        await store.clearMemoryCache()
+        
+        Task.detached {
+            ImageDiskCache.shared.clearDiskCache()
+        }
+    }
+} //
+//  FirebaseImageLoader.swift
+//  brizlist_test1
+//
+//  Created by Stephen Dawes on 04/05/2025.
+//
+
+import SwiftUI
+import FirebaseStorage
+
+class FirebaseImageLoader: ObservableObject {
+    @Published var image: UIImage?
+    @Published var isLoading = false
+    @Published var error: Error?
+    
+    private var storage = Storage.storage()
+    private var localCache = NSCache<NSString, UIImage>()
+    
+    // Load an image from Firebase Storage using the recommended Firebase approach
+    func loadImage(from path: String, completion: @escaping (UIImage?) -> Void) {
+        // Check if we have a cached version first
+        let cacheKey = path as NSString
+        if let cachedImage = localCache.object(forKey: cacheKey) {
+            print("📂 Using cached image for: \(path)")
+            completion(cachedImage)
+            return
+        }
+        
+        isLoading = true
+        error = nil
+        
+        // Check if the path is a Storage URL or a Storage path
+        let storageRef: StorageReference
+        if path.hasPrefix("gs://") || path.hasPrefix("https://firebasestorage.googleapis.com") {
+            print("🔥 Loading from full Firebase URL: \(path)")
+            storageRef = storage.reference(forURL: path)
+        } else {
+            print("🔥 Loading from Firebase path: \(path)")
+            storageRef = storage.reference().child(path)
+        }
+        
+        // Download the image using Firebase SDK
+        storageRef.getData(maxSize: 5 * 1024 * 1024) { [weak self] data, error in
+            DispatchQueue.main.async {
+                self?.isLoading = false
+                
+                if let error = error {
+                    print("❌ Firebase download error: \(error.localizedDescription)")
+                    self?.error = error
+                    completion(nil)
+                    return
+                }
+                
+                guard let data = data, let image = UIImage(data: data) else {
+                    print("❌ Failed to create image from data")
+                    completion(nil)
+                    return
+                }
+                
+                print("✅ Successfully loaded image from Firebase")
+                // Cache the image for future use
+                self?.localCache.setObject(image, forKey: cacheKey)
+                self?.image = image
+                completion(image)
+            }
+        }
+    }
+    
+    // Load an image using the download URL approach (alternative method)
+    func loadImageViaURL(from path: String, completion: @escaping (UIImage?) -> Void) {
+        // Check if we have a cached version first
+        let cacheKey = path as NSString
+        if let cachedImage = localCache.object(forKey: cacheKey) {
+            print("📂 Using cached image for: \(path)")
+            completion(cachedImage)
+            return
+        }
+        
+        isLoading = true
+        error = nil
+        
+        let storageRef: StorageReference
+        if path.hasPrefix("gs://") || path.hasPrefix("https://firebasestorage.googleapis.com") {
+            storageRef = storage.reference(forURL: path)
+        } else {
+            storageRef = storage.reference().child(path)
+        }
+        
+        // First get the download URL
+        storageRef.downloadURL { [weak self] url, error in
+            if let error = error {
+                print("❌ Failed to get download URL: \(error.localizedDescription)")
+                DispatchQueue.main.async {
+                    self?.isLoading = false
+                    self?.error = error
+                    completion(nil)
+                }
+                return
+            }
+            
+            guard let url = url else {
+                print("❌ Received nil download URL")
+                DispatchQueue.main.async {
+                    self?.isLoading = false
+                    completion(nil)
+                }
+                return
+            }
+            
+            print("🔗 Got download URL: \(url.absoluteString)")
+            
+            // Now download the data using URLSession
+            URLSession.shared.dataTask(with: url) { data, response, error in
+                DispatchQueue.main.async {
+                    self?.isLoading = false
+                    
+                    if let error = error {
+                        print("❌ URLSession download error: \(error.localizedDescription)")
+                        self?.error = error
+                        completion(nil)
+                        return
+                    }
+                    
+                    guard let data = data, let image = UIImage(data: data) else {
+                        print("❌ Failed to create image from data")
+                        completion(nil)
+                        return
+                    }
+                    
+                    print("✅ Successfully loaded image from URL")
+                    // Cache the image for future use
+                    self?.localCache.setObject(image, forKey: cacheKey)
+                    self?.image = image
+                    completion(image)
+                }
+            }.resume()
+        }
+    }
+}
+
+// A SwiftUI view that uses our Firebase image loader
+struct FirebaseImage: View {
+    let path: String?
+    
+    @State private var image: UIImage?
+    @State private var isLoading = false
+    @State private var hasError = false
+    
+    // Initialize with a Firebase Storage path or URL
+    init(path: String?) {
+        self.path = path
+    }
+    
+    var body: some View {
+        Group {
+            if let image = image {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else if isLoading {
+                ZStack {
+                    Color.gray.opacity(0.3)
+                    ProgressView()
+                }
+            } else if !hasError {
+                Color.gray.opacity(0.3)
+                    .overlay(
+                        Image(systemName: "photo")
+                            .font(.largeTitle)
+                            .foregroundColor(.gray)
+                    )
+                    .onAppear(perform: loadImage)
+            } else {
+                // No image or placeholder shown if there was an error
+                Color.clear
+            }
+        }
+    }
+    
+    private func loadImage() {
+        guard let imagePath = path, !isLoading else {
+            hasError = true
+            return
+        }
+        
+        isLoading = true
+        print("🔥 Loading Firebase image: \(imagePath)")
+        
+        let loader = FirebaseImageLoader()
+        loader.loadImage(from: imagePath) { loadedImage in
+            isLoading = false
+            
+            if let loadedImage = loadedImage {
+                image = loadedImage
+                hasError = false
+            } else {
+                hasError = true
+                
+                // Try alternative method if direct method fails
+                loader.loadImageViaURL(from: imagePath) { altImage in
+                    if let altImage = altImage {
+                        image = altImage
+                        hasError = false
+                    } else {
+                        hasError = true
+                    }
+                }
+            }
+        }
+    }
+} //
 //  RefreshControl.swift
 //  brizlist_test1
 //
@@ -378,10 +977,204 @@ struct RefreshControl: View {
 import Foundation
 
 struct FormValidator {
-    static func isFormValid(name: String, category: String, description: String, location: String) -> Bool {
-        return !name.isEmpty && !category.isEmpty && !description.isEmpty && !location.isEmpty
+    static func isFormValid(name: String, tags: [String], description: String, location: String) -> Bool {
+        return !name.isEmpty && !tags.isEmpty && !description.isEmpty && !location.isEmpty
     }
 }//
+//  RemoteImageLoader.swift
+//  brizlist_test1
+//
+//  Created by Stephen Dawes on 23/04/2025.
+//
+
+import SwiftUI
+import FirebaseStorage
+
+struct RemoteImage: View {
+    let url: String?
+    let aspectRatio: ContentMode
+    let fallbackImage: String
+    
+    @State private var loadedImage: UIImage?
+    @State private var isLoading = false
+    @State private var loadError = false
+    
+    init(url: String?, aspectRatio: ContentMode = .fill, fallbackImage: String = "tacos") {
+        self.url = url
+        self.aspectRatio = aspectRatio
+        self.fallbackImage = fallbackImage
+    }
+    
+    var body: some View {
+        Group {
+            if let image = loadedImage {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: aspectRatio)
+            } else if isLoading {
+                ProgressView()
+            } else if loadError {
+                Image(fallbackImage)
+                    .resizable()
+                    .aspectRatio(contentMode: aspectRatio)
+            } else {
+                Image(fallbackImage)
+                    .resizable()
+                    .aspectRatio(contentMode: aspectRatio)
+            }
+        }
+        .onAppear {
+            loadImageIfNeeded()
+        }
+    }
+    
+    private func loadImageIfNeeded() {
+        guard let imageUrl = url, !isLoading, loadedImage == nil, !loadError else {
+            return
+        }
+        
+        isLoading = true
+        print("🔄 Starting to load image: \(imageUrl)")
+        
+        // Use async Task to load the image
+        Task {
+            if imageUrl.contains("firebasestorage.googleapis.com") {
+                print("🔥 Detected Firebase Storage URL")
+                
+                // First try direct URL approach - simplest and often works
+                if let directUrl = URL(string: imageUrl) {
+                    print("🌐 Trying direct URL loading first")
+                    let directImage = await ImageCache.shared.image(for: directUrl)
+                    
+                    if let directImage = directImage {
+                        print("✅ Direct URL loading successful!")
+                        await MainActor.run {
+                            loadedImage = directImage
+                            isLoading = false
+                        }
+                        return
+                    }
+                }
+                
+                // If direct URL fails, try Firebase SDK approach
+                await loadFirebaseImage(url: imageUrl)
+            } else if let standardUrl = URL(string: imageUrl) {
+                print("🌐 Detected standard URL")
+                await loadCachedImage(url: standardUrl)
+            } else {
+                print("❌ Invalid URL format: \(imageUrl)")
+                await MainActor.run {
+                    isLoading = false
+                    loadError = true
+                }
+            }
+        }
+    }
+    
+    private func loadCachedImage(url: URL) async {
+        // No need for a do/catch here as ImageCache.shared.image() doesn't throw
+        let cachedImage = await ImageCache.shared.image(for: url)
+        
+        await MainActor.run {
+            if let cachedImage = cachedImage {
+                loadedImage = cachedImage
+                isLoading = false
+                print("✅ Image loaded successfully from cache")
+            } else {
+                loadError = true
+                isLoading = false
+                print("❌ Failed to load image from cache")
+            }
+        }
+    }
+    
+    private func loadFirebaseImage(url: String) async {
+        print("🔥 Loading Firebase image: \(url)")
+        
+        // Check if we have the image URL cached from a previous Firebase download
+        let key = "firebase_\(url.hash)"
+        
+        // Check if we have the actual download URL cached
+        let defaults = UserDefaults.standard
+        if let cachedDirectUrl = defaults.string(forKey: key),
+           let directUrl = URL(string: cachedDirectUrl) {
+            print("📦 Using cached Firebase direct URL: \(cachedDirectUrl)")
+            await loadCachedImage(url: directUrl)
+            return
+        }
+        
+        // We need to get the download URL from Firebase
+        do {
+            print("⬇️ Getting download URL from Firebase...")
+            let storage = Storage.storage()
+            
+            // Use a more reliable way to get the reference
+            var storageRef: StorageReference
+            
+            // Handle both gs:// and https:// URLs
+            if url.hasPrefix("gs://") {
+                storageRef = storage.reference(forURL: url)
+            } else {
+                // Extract the path from https URL
+                // Example: https://firebasestorage.googleapis.com/v0/b/[bucket]/o/[path]?token=...
+                guard let pathStart = url.range(of: "/o/")?.upperBound,
+                      let pathEnd = url.range(of: "?", options: [], range: pathStart..<url.endIndex)?.lowerBound else {
+                    
+                    print("⚠️ Trying direct reference as fallback")
+                    storageRef = storage.reference(forURL: url)
+                    
+                    // Fallback to direct reference
+                    await MainActor.run {
+                        print("⚠️ Using direct URL reference")
+                        if let directUrl = URL(string: url) {
+                            Task {
+                                await loadCachedImage(url: directUrl)
+                            }
+                            return
+                        } else {
+                            loadError = true
+                            isLoading = false
+                        }
+                    }
+                    return
+                }
+                
+                let path = String(url[pathStart..<pathEnd])
+                    .replacingOccurrences(of: "%2F", with: "/")
+                print("📁 Extracted path: \(path)")
+                
+                storageRef = storage.reference().child(path)
+            }
+            
+            // Get the download URL
+            let downloadURL = try await storageRef.downloadURL()
+            print("✅ Got Firebase download URL: \(downloadURL.absoluteString)")
+            
+            // Save the download URL for future use
+            defaults.set(downloadURL.absoluteString, forKey: key)
+            
+            // Now load the image using our cache
+            await loadCachedImage(url: downloadURL)
+        } catch {
+            await MainActor.run {
+                print("❌ Firebase image error: \(error)")
+                
+                // Try direct URL as a fallback
+                print("⚠️ Attempting fallback to direct URL...")
+                if let directUrl = URL(string: url) {
+                    Task {
+                        await loadCachedImage(url: directUrl)
+                    }
+                } else {
+                    loadError = true
+                    isLoading = false
+                }
+            }
+        }
+    }
+}
+
+//
 //  AboutView.swift
 //  brizlist_test1
 //
@@ -465,82 +1258,6 @@ struct AboutSheetView: View {
     AboutSheetView()
 }
 //
-//  AddListingView.swift
-//  brizlist_test1
-//
-//  Created by Stephen Dawes on 14/03/2025.
-//
-
-import SwiftUI
-
-struct AddListingView: View {
-    @Environment(\.dismiss) var dismiss
-    @ObservedObject var viewModel: ListingsViewModel
-    
-    @State private var name = ""
-    @State private var category = ""
-    @State private var description = ""
-    @State private var location = ""
-    @State private var isVeg: Bool = false
-    @State private var isDog: Bool = false
-    @State private var isChild: Bool = false
-    @State private var isBrizPick: Bool = false
-    @State private var isSundayLunch: Bool = false
-    @State private var isFeatured: Bool = false
-    
-    var body: some View {
-        NavigationView {
-            Form {
-                Section(header: Text("Listing Details")) {
-                    TextField("Name", text: $name)
-                    TextField("Category", text: $category)
-                    TextField("Description", text: $description)
-                    TextField("Location", text: $location)
-                }
-
-                Section(header: Text("Features")) {
-                    Toggle("Vegetarian Friendly", isOn: $isVeg)
-                    Toggle("Dog Friendly", isOn: $isDog)
-                    Toggle("Child Friendly", isOn: $isChild)
-                    Toggle("Briz Pick", isOn: $isBrizPick)
-                    Toggle("Sunday Lunch", isOn: $isSundayLunch)
-                    Toggle("Featured", isOn: $isFeatured)
-                }
-                
-                Section {
-                    Button(action: {
-                        let newListing = Listing(
-                            name: name,
-                            category: category,
-                            description: description,
-                            location: location,
-                            isBrizPick: isBrizPick,
-                            isVeg: isVeg,
-                            isDog: isDog,
-                            isChild: isChild,
-                            isSundayLunch: isSundayLunch,
-                            isFeatured: isFeatured
-                        )
-                        viewModel.addListing(newListing)
-                        dismiss()
-                    }) {
-                        Text("Save")
-                    }
-                    .disabled(name.isEmpty || category.isEmpty || description.isEmpty || location.isEmpty)
-                }
-            }
-            .navigationTitle("Add Listing")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-            }
-        }
-    }
-}
-//
 //  ListingStyling.swift
 //  brizlist_test1
 //
@@ -552,13 +1269,7 @@ import SwiftUI
 
 struct ListingStyling {
     
-    // MARK: - Category Styling
-    
-    static func categoryTextView(_ category: String) -> some View {
-        Text(category.lowercased())
-            .font(.caption)
-            .foregroundColor(.black)
-    }
+
     
     
 
@@ -606,97 +1317,200 @@ struct ListingStyling {
     
     static func brizPickCustomSymbol() -> some View {
         Image(systemName: "star.fill")
-            .font(.caption)
-            .foregroundColor(.black)
+            .font(.system(size: 12))
+            .foregroundColor(.white)
     }
 
     // MARK: - Amenity Symbols
     
     static func veganSymbol() -> some View {
         Image(systemName: "carrot.fill")
-            .font(.caption)
+            .font(.system(size: 12))
+            .foregroundColor(.white)
     }
     
     static func vegSymbol() -> some View {
         Image(systemName: "leaf.fill")
-            .font(.caption)
+            .font(.system(size: 12))
+            .foregroundColor(.white)
     }
     
     static func dogSymbol() -> some View {
         Image(systemName: "pawprint.fill")
-            .font(.caption)
+            .font(.system(size: 12))
+            .foregroundColor(.white)
     }
     
     static func childSymbol() -> some View {
         Image(systemName: "figure.2.and.child.holdinghands")
-            .font(.caption)
+            .font(.system(size: 12))
+            .foregroundColor(.white)
     }
 
     // MARK: - Sunday Lunch Symbol
     
     static func sundayLunchSymbol() -> some View {
         Image(systemName: "oven.fill")
-            .font(.caption)
+            .font(.system(size: 12))
+            .foregroundColor(.white)
     }
 
     
 
-    // MARK: - Category Pill
-
-    static func categoryPill(_ category: String) -> some View {
-        let systemName: String
-        let color: Color
-        
-        switch category.lowercased() {
-        case "pub", "bar":
-            systemName = "mug.fill"
-            color = Color(red: 0.13, green: 0.55, blue: 0.13) // Deep forest green
-        case "restaurant", "bistro":
-            systemName = "fork.knife"
-            color = Color(red: 0.75, green: 0.0, blue: 0.0) // Deep crimson red
-        case "café", "cafe", "coffee shop":
-            systemName = "cup.and.saucer.fill"
-            color = Color(red: 0.0, green: 0.35, blue: 0.65) // Rich navy blue
-        case "bakery":
-            systemName = "birthday.cake.fill"
-            color = Color(red: 0.65, green: 0.16, blue: 0.43) // Deep magenta
-        case "deli", "food market":
-            systemName = "basket.fill"
-            color = Color(red: 0.55, green: 0.27, blue: 0.07) // Rich brown
-        case "takeaway", "fast food":
-            systemName = "bag.fill"
-            color = Color(red: 0.85, green: 0.53, blue: 0.0) // Deep amber/orange
-        default:
-            systemName = "mappin"
-            color = Color(red: 0.35, green: 0.35, blue: 0.35) // Dark charcoal
-        }
-        
-        return HStack(spacing: 6) {
-            Image(systemName: systemName)
-                .font(.caption2)
-            
-            Text(category.uppercased())
-                .font(.caption2)
-                .fontWeight(.semibold)
-        }
-        .foregroundColor(.white)
-        .padding(.vertical, 4)
-        .padding(.horizontal, 8)
-        .background(
-            Capsule()
-                .fill(color)
-        )
-    }
 
     // MARK: - Featured Symbol
     static func featuredSymbol() -> some View {
         Image(systemName: "medal.fill")
-            .font(.caption)
-            .foregroundColor(.orange) // Gold/orange color for the medal
+            .font(.system(size: 12))
+            .foregroundColor(.white)
+    }
+
+    // MARK: - Tag Pills
+
+    static func tagPill(_ tag: String) -> some View {
+        return Text(tag.uppercased())
+            .font(.caption2)
+            .fontWeight(.medium)
+            .foregroundColor(.black)
+            .padding(.vertical, 3)
+            .padding(.horizontal, 8)
+            .background(
+                Capsule()
+                    .fill(Color(red: 0.93, green: 0.87, blue: 0.76)) // Light oak cream color
+            )
+    }
+
+    // Helper function for backward compatibility
+    static func styleForTag(_ tag: String) -> (systemName: String, color: Color) {
+        // All tags now use the same style, but keeping method for backward compatibility
+        return ("", Color(red: 0.93, green: 0.87, blue: 0.76)) // Light oak cream color
+    }
+
+    // View for displaying multiple tags horizontally
+    static func tagsView(tags: [String]) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 4) {
+                ForEach(tags, id: \.self) { tag in
+                    tagPill(tag)
+                }
+            }
+        }
     }
 
 }
 //
+//  CachingImageView.swift
+//  brizlist_test1
+//
+//  Created by Stephen Dawes on 03/05/2025.
+//
+
+import SwiftUI
+
+struct CachingImageView: View {
+    let urlString: String?
+    let aspectRatio: ContentMode
+    let fallbackImageName: String
+    
+    @State private var image: UIImage?
+    @State private var isLoading = false
+    @State private var loadError = false
+    @State private var retryCount = 0
+    
+    init(urlString: String?, aspectRatio: ContentMode = .fill, fallbackImageName: String = "placeholder_food") {
+        self.urlString = urlString
+        self.aspectRatio = aspectRatio
+        self.fallbackImageName = fallbackImageName
+    }
+    
+    var body: some View {
+        Group {
+            if let image = image {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: aspectRatio)
+            } else if loadError {
+                // Show fallback image from bundle
+                Image(fallbackImageName)
+                    .resizable()
+                    .aspectRatio(contentMode: aspectRatio)
+                    .overlay(
+                        Button(action: {
+                            // Reset error state and retry loading
+                            loadError = false
+                            retryCount = 0
+                            loadImage()
+                        }) {
+                            Image(systemName: "arrow.clockwise.circle.fill")
+                                .font(.title)
+                                .foregroundColor(.white)
+                                .shadow(radius: 2)
+                        }
+                        .padding(8)
+                        .background(Color.black.opacity(0.6))
+                        .clipShape(Circle()),
+                        alignment: .bottomTrailing
+                    )
+            } else {
+                Color.gray.opacity(0.3)
+                    .overlay(
+                        Group {
+                            if isLoading {
+                                ProgressView()
+                            } else {
+                                Image(systemName: "photo")
+                                    .font(.largeTitle)
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                    )
+                    .onAppear {
+                        loadImage()
+                    }
+            }
+        }
+    }
+    
+    private func loadImage() {
+        guard let urlString = urlString, 
+              let url = URL(string: urlString),
+              !isLoading, !loadError || retryCount < 3 else {
+            if loadError {
+                print("⚠️ Not retrying after 3 failed attempts")
+            }
+            return
+        }
+        
+        isLoading = true
+        retryCount += 1
+        print("🔍 CachingImageView loading: \(urlString) (attempt \(retryCount))")
+        
+        Task {
+            do {
+                if let loadedImage = await ImageCache.shared.image(for: url) {
+                    await MainActor.run {
+                        self.image = loadedImage
+                        self.isLoading = false
+                        self.loadError = false
+                        print("✅ Image loaded successfully")
+                    }
+                } else {
+                    await MainActor.run {
+                        self.isLoading = false
+                        self.loadError = true
+                        print("❌ Failed to load image - using fallback")
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    self.isLoading = false
+                    self.loadError = true
+                    print("❌ Error loading image: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+} //
 //  ListingDetailView.swift
 //  brizlist_test1
 //
@@ -711,49 +1525,103 @@ struct ListingDetailView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(alignment: .leading, spacing: 16) {
-                Text(listing.name)
-                    .font(.title3.bold())
-                
-                Text("A beloved local spot that's been serving Bristol for years. Known for their exceptional service and welcoming atmosphere, this place has become a cornerstone of the community.")
-                    .font(.caption)
-                
-                Text("Whether you're stopping by for a quick visit or settling in for a longer stay, you'll find yourself surrounded by the warm, authentic vibe that makes Bristol's food scene so special.")
-                    .font(.caption)
-                
-                Text("Make sure to check out their seasonal specials and don't forget to ask about their house recommendations!")
-                    .font(.caption)
-                
-                Divider()
-                
-                Text("Opening Hours")
-                    .font(.title3.bold())
-                
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "clock")
-                            .foregroundColor(.black)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    // Hero image at the top
+                    if let imageUrl = listing.imageUrl {
+                        FirebaseStorageImage(urlString: imageUrl)
+                            .frame(height: 220)
+                            .clipped()
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .shadow(radius: 2)
+                            .onAppear {
+                                print("📷 Detail view loading image: \(imageUrl)")
+                            }
+                    }
+                    
+                    Text(listing.name)
+                        .font(.title3.bold())
+                    
+                    HStack {
+                        if !listing.tags.isEmpty {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 4) {
+                                    ForEach(listing.tags, id: \.self) { tag in
+                                        ListingStyling.tagPill(tag)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if !listing.cuisine.isEmpty {
+                            Text(listing.cuisine)
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
+                    // Use the actual description if available
+                    if !listing.description.isEmpty {
+                        Text(listing.description)
                             .font(.caption)
-                            .frame(width: 20, alignment: .center)
-                        Text("Mon-Fri: 9am - 10pm")
+                    } else {
+                        // Fallback description
+                        Text("A beloved local spot that's been serving Bristol for years. Known for their exceptional service and welcoming atmosphere, this place has become a cornerstone of the community.")
+                            .font(.caption)
+                        
+                        Text("Whether you're stopping by for a quick visit or settling in for a longer stay, you'll find yourself surrounded by the warm, authentic vibe that makes Bristol's food scene so special.")
+                            .font(.caption)
+                        
+                        Text("Make sure to check out their seasonal specials and don't forget to ask about their house recommendations!")
                             .font(.caption)
                     }
                     
-                    HStack(spacing: 8) {
-                        Image(systemName: "clock")
-                            .foregroundColor(.black)
-                            .font(.caption)
-                            .frame(width: 20, alignment: .center)
-                        Text("Sat-Sun: 10am - 11pm")
-                            .font(.caption)
+                    // Location information
+                    if !listing.location.isEmpty {
+                        Divider()
+                        
+                        Text("Location")
+                            .font(.title3.bold())
+                            
+                        HStack(spacing: 8) {
+                            Image(systemName: "location.circle.fill")
+                                .foregroundColor(.black)
+                                .font(.caption)
+                                .frame(width: 20, alignment: .center)
+                            Text(listing.location)
+                                .font(.caption)
+                        }
+                    }
+                    
+                    Divider()
+                    
+                    Text("Opening Hours")
+                        .font(.title3.bold())
+                    
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "clock")
+                                .foregroundColor(.black)
+                                .font(.caption)
+                                .frame(width: 20, alignment: .center)
+                            Text("Mon-Fri: 9am - 10pm")
+                                .font(.caption)
+                        }
+                        
+                        HStack(spacing: 8) {
+                            Image(systemName: "clock")
+                                .foregroundColor(.black)
+                                .font(.caption)
+                                .frame(width: 20, alignment: .center)
+                            Text("Sat-Sun: 10am - 11pm")
+                                .font(.caption)
+                        }
                     }
                 }
-                
-                Spacer()
+                .padding(20)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.white)
             }
-            .padding(20)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.white)
             .navigationTitle("Details")
             .navigationBarTitleDisplayMode(.inline)
         }
@@ -764,89 +1632,136 @@ struct ListingDetailView: View {
     ListingDetailView(listing: Listing(
         id: "1",
         name: "The Bristol Lounge",
-        category: "Restaurant",
+        tags: ["restaurant", "italian"],
+        cuisine: "Italian",
         description: "A cozy spot in the heart of Bristol",
         location: "Clifton, Bristol"
     ))
 }
 //
+//  CachedAsyncImage.swift
+//  brizlist_test1
+//
+//  Created by Stephen Dawes on 03/05/2025.
+//
+
+import SwiftUI
+
+struct CachedAsyncImage<Content: View, Placeholder: View>: View {
+    private let url: URL?
+    private let scale: CGFloat
+    private let content: (Image) -> Content
+    private let placeholder: () -> Placeholder
+    
+    @State private var cachedImage: UIImage?
+    @State private var isLoading = false
+    
+    init(
+        url: URL?,
+        scale: CGFloat = 1.0,
+        @ViewBuilder content: @escaping (Image) -> Content,
+        @ViewBuilder placeholder: @escaping () -> Placeholder
+    ) {
+        self.url = url
+        self.scale = scale
+        self.content = content
+        self.placeholder = placeholder
+    }
+    
+    var body: some View {
+        Group {
+            if let cachedImage {
+                content(Image(uiImage: cachedImage).resizable())
+            } else {
+                placeholder()
+                    .onAppear {
+                        loadImage()
+                    }
+            }
+        }
+    }
+    
+    private func loadImage() {
+        guard !isLoading, let url = url else { return }
+        
+        isLoading = true
+        
+        Task {
+            let image = await ImageCache.shared.image(for: url)
+            
+            await MainActor.run {
+                self.cachedImage = image
+                self.isLoading = false
+            }
+        }
+    }
+}
+
+// Convenience initializer with animation
+extension CachedAsyncImage {
+    init(
+        url: URL?,
+        scale: CGFloat = 1.0,
+        transaction: Transaction = Transaction(),
+        @ViewBuilder content: @escaping (Image) -> Content,
+        @ViewBuilder placeholder: @escaping () -> Placeholder
+    ) {
+        self.init(url: url, scale: scale, content: content, placeholder: placeholder)
+    }
+}
+
+// Convenience initializer with simple placeholder
+extension CachedAsyncImage where Placeholder == ProgressView<EmptyView, EmptyView> {
+    init(
+        url: URL?,
+        scale: CGFloat = 1.0,
+        @ViewBuilder content: @escaping (Image) -> Content
+    ) {
+        self.init(
+            url: url,
+            scale: scale,
+            content: content,
+            placeholder: { ProgressView() }
+        )
+    }
+}
+
+// Convenience initializer with default content and placeholder
+extension CachedAsyncImage where Content == Image, Placeholder == ProgressView<EmptyView, EmptyView> {
+    init(url: URL?, scale: CGFloat = 1) {
+        self.init(
+            url: url,
+            scale: scale,
+            content: { $0 },
+            placeholder: { ProgressView() }
+        )
+    }
+} //
 //  EditListingView.swift
 //  brizlist_test1
 //
 //  Created by Stephen Dawes on 14/03/2025.
-//
+//  Note: This view is no longer used as edit functionality has been removed.
 
 import Foundation
 import SwiftUI
 
 struct EditListingView: View {
     @Environment(\.dismiss) var dismiss
-    @ObservedObject var viewModel: ListingsViewModel
     var listing: Listing
-    
-    @State private var name: String
-    @State private var category: String
-    @State private var description: String
-    @State private var location: String
-    @State private var isVeg: Bool
-    @State private var isDog: Bool
-    @State private var isChild: Bool
-    @State private var isBrizPick: Bool
-    @State private var isSundayLunch: Bool
-    @State private var isFeatured: Bool
-    
-    init(viewModel: ListingsViewModel, listing: Listing) {
-        self.viewModel = viewModel
-        self.listing = listing
-        _name = State(initialValue: listing.name)
-        _category = State(initialValue: listing.category)
-        _description = State(initialValue: listing.description)
-        _location = State(initialValue: listing.location)
-        _isVeg = State(initialValue: listing.isVeg ?? false)
-        _isDog = State(initialValue: listing.isDog ?? false)
-        _isChild = State(initialValue: listing.isChild ?? false)
-        _isBrizPick = State(initialValue: listing.isBrizPick ?? false)
-        _isSundayLunch = State(initialValue: listing.isSundayLunch ?? false)
-        _isFeatured = State(initialValue: listing.isFeatured ?? false)
-    }
     
     var body: some View {
         NavigationView {
-            Form {
-                Section(header: Text("Listing Details")) {
-                    TextField("Name of business", text: $name)
-                    TextField("Category", text: $category)
-                    TextField("Description", text: $description)
-                    TextField("Location", text: $location)
-                }
-
-                Section(header: Text("Features")) {
-                    Toggle("Vegetarian Friendly", isOn: $isVeg)
-                    Toggle("Dog Friendly", isOn: $isDog)
-                    Toggle("Child Friendly", isOn: $isChild)
-                    Toggle("Briz Pick", isOn: $isBrizPick)
-                    Toggle("Sunday Lunch", isOn: $isSundayLunch)
-                    Toggle("Featured", isOn: $isFeatured)
-                }
+            VStack {
+                Text("Editing functionality has been removed")
+                    .padding()
                 
-                Button("Update") {
-                    var updatedListing = listing
-                    updatedListing.name = name
-                    updatedListing.category = category
-                    updatedListing.description = description
-                    updatedListing.location = location
-                    updatedListing.isVeg = isVeg
-                    updatedListing.isDog = isDog
-                    updatedListing.isChild = isChild
-                    updatedListing.isBrizPick = isBrizPick
-                    updatedListing.isSundayLunch = isSundayLunch
-                    updatedListing.isFeatured = isFeatured
-                    viewModel.updateListing(updatedListing)
+                Button("Close") {
                     dismiss()
                 }
-                .disabled(name.isEmpty || category.isEmpty || description.isEmpty || location.isEmpty)
+                .padding()
             }
-            .navigationTitle("Edit Listing")
+            .navigationTitle("View Details")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
@@ -856,8 +1771,139 @@ struct EditListingView: View {
             }
         }
     }
-}
+} //
+//  FirebaseStorageImage.swift
+//  brizlist_test1
 //
+//  Created by Stephen Dawes on 04/05/2025.
+//
+
+import SwiftUI
+import FirebaseStorage
+
+// Shared cache for images
+private class ImageCache {
+    static let shared = ImageCache()
+    private var cache = NSCache<NSString, UIImage>()
+    
+    func getImage(for key: String) -> UIImage? {
+        return cache.object(forKey: key as NSString)
+    }
+    
+    func setImage(_ image: UIImage, for key: String) {
+        cache.setObject(image, forKey: key as NSString)
+    }
+}
+
+struct FirebaseStorageImage: View {
+    let urlString: String?
+    
+    @State private var image: UIImage?
+    @State private var isLoading = true
+    
+    var body: some View {
+        Group {
+            if let image = image {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else if isLoading {
+                ProgressView()
+            } else {
+                // Nothing shown if no image or error
+                Color.clear
+            }
+        }
+        .onAppear {
+            loadImage()
+        }
+    }
+    
+    private func loadImage() {
+        guard let urlString = urlString else {
+            print("⚠️ No URL provided for FirebaseStorageImage")
+            isLoading = false
+            return
+        }
+        
+        // Check if image is already cached
+        if let cachedImage = ImageCache.shared.getImage(for: urlString) {
+            print("📂 Using cached image for: \(urlString)")
+            image = cachedImage
+            isLoading = false
+            return
+        }
+        
+        print("🔄 Attempting to load: \(urlString)")
+        
+        // First try direct URL loading if it's an https URL
+        if urlString.hasPrefix("https://") {
+            if let url = URL(string: urlString) {
+                print("🌐 Loading via URLSession: \(urlString)")
+                URLSession.shared.dataTask(with: url) { data, response, error in
+                    DispatchQueue.main.async {
+                        if let data = data, let downloadedImage = UIImage(data: data) {
+                            print("✅ Direct URL loading successful")
+                            self.image = downloadedImage
+                            self.isLoading = false
+                            // Cache the successfully loaded image
+                            ImageCache.shared.setImage(downloadedImage, for: urlString)
+                            return
+                        } else {
+                            // Continue to Firebase loading method
+                            print("⚠️ Direct URL loading failed, trying Firebase...")
+                            loadFromFirebase(urlString: urlString)
+                        }
+                    }
+                }.resume()
+                return
+            }
+        }
+        
+        // If not an https URL or URL creation failed, try Firebase
+        loadFromFirebase(urlString: urlString)
+    }
+    
+    private func loadFromFirebase(urlString: String) {
+        let storage = Storage.storage()
+        
+        // Create appropriate reference
+        let storageRef: StorageReference
+        if urlString.hasPrefix("gs://") {
+            print("🔥 Using gs:// reference: \(urlString)")
+            storageRef = storage.reference(forURL: urlString)
+        } else if urlString.hasPrefix("https://firebasestorage.googleapis.com") {
+            print("🔥 Using https:// Firebase reference: \(urlString)")
+            storageRef = storage.reference(forURL: urlString)
+        } else {
+            print("🔥 Using path in default bucket: \(urlString)")
+            storageRef = storage.reference().child(urlString)
+        }
+        
+        // Get the data directly
+        storageRef.getData(maxSize: 5 * 1024 * 1024) { data, error in
+            DispatchQueue.main.async {
+                self.isLoading = false
+                
+                if let error = error {
+                    print("❌ Firebase Storage error: \(error.localizedDescription)")
+                    return
+                }
+                
+                guard let data = data, let downloadedImage = UIImage(data: data) else {
+                    print("❌ Invalid image data from Firebase")
+                    return
+                }
+                
+                print("✅ Successfully loaded image from Firebase")
+                self.image = downloadedImage
+                
+                // Cache the successfully loaded image
+                ImageCache.shared.setImage(downloadedImage, for: urlString)
+            }
+        }
+    }
+} //
 //  ListingCardView.swift
 //  brizlist_test1
 //
@@ -868,100 +1914,98 @@ import SwiftUI
 
 struct ListingCardView: View {
     let listing: Listing
-    let onEdit: (Listing) -> Void
-    let onDelete: (Listing) -> Void
     @State private var showingDetailView = false
     
     var body: some View {
         Button(action: {
             showingDetailView = true
+            // Print image URL for debugging
+            if let imageUrl = listing.imageUrl {
+                print("📱 Listing Card for \(listing.name) has imageUrl: \(imageUrl)")
+            }
         }) {
-            // Simple white card with direct content
-            VStack(alignment: .leading, spacing: 8) {
-                // Top row with category and symbols
-                HStack {
-                    // Category with symbol
-                    ListingStyling.categoryPill(listing.category)
+            // Card structure without symbol margin
+            ZStack(alignment: .top) {
+                // Main content area excluding category (starts below the category)
+                VStack(alignment: .leading, spacing: 4) {
+                    // Listing name
+                    Text(listing.name)
+                        .font(.headline)
+                        .padding(.top, 4)
+                    
+                    // Description (if available)
+                    if !listing.description.isEmpty {
+                        Text(listing.description)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(3) // Allow up to 3 lines
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true) // Allow vertical expansion
+                            .frame(width: UIScreen.main.bounds.width * 0.45, alignment: .leading)
+                            .padding(.top, 2)
+                    }
                     
                     Spacer()
                     
-                    // Amenity symbols
-                    HStack(spacing: 4) {
-                        if listing.isFeatured ?? false { 
-                            ListingStyling.featuredSymbol() 
-                        }
-                        if listing.isBrizPick ?? false { 
-                            ListingStyling.brizPickCustomSymbol() 
-                        }
-                        if listing.isVeg ?? false { ListingStyling.vegSymbol() }
-                        if listing.isDog ?? false { ListingStyling.dogSymbol() }
-                        if listing.isChild ?? false { ListingStyling.childSymbol() }
-                        if listing.isSundayLunch ?? false { ListingStyling.sundayLunchSymbol() }
-                    }
-                    .foregroundColor(.black)
-                }
-                
-                Divider()
-                
-                // Listing name
-                Text(listing.name)
-                    .font(.headline)
-                
-                // Description (if available)
-                if !listing.description.isEmpty {
-                    Text(listing.description)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(2)
-                }
-                
-                Spacer()
-                
-                // Footer
-                HStack {
-                    // Location
+                    // Footer with just location
                     HStack(spacing: 4) {
                         Image(systemName: "location.circle.fill")
                             .font(.caption2)
                         
                         Text(listing.location.uppercased())
                             .font(.caption2)
+                        
+                        Spacer()
                     }
                     .foregroundColor(.black)
+                }
+                .padding(.horizontal, 12)
+                .padding(.bottom, 12)
+                .padding(.top, 40) // Space for the tags row above
+                .frame(maxWidth: .infinity, alignment: .leading)
+                
+                // Tags and cuisine row - positioned at the very top
+                HStack {
+                    // Only show tags if available
+                    if !listing.tags.isEmpty {
+                        ListingStyling.tagsView(tags: listing.tags)
+                    }
+                    
+                    // Only show cuisine if it's not empty
+                    if !listing.cuisine.isEmpty {
+                        Text(listing.cuisine)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .padding(.leading, 4)
+                    }
                     
                     Spacer()
-                    
-                    // Action buttons
-                    HStack(spacing: 12) {
-                        Button(action: { onEdit(listing) }) {
-                            Image(systemName: "pencil.circle")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                        }
-                        
-                        Button(action: { onDelete(listing) }) {
-                            Image(systemName: "trash.circle")
-                                .font(.caption)
-                                .foregroundColor(.red)
+                }
+                .padding(.horizontal, 12)
+                .padding(.top, 12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .zIndex(1)
+                
+                // Floating image box - vertically centered
+                FirebaseStorageImage(urlString: listing.imageUrl)
+                    .frame(width: 120, height: 120)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .padding(.trailing, 12)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                    .zIndex(2)
+                    .onAppear {
+                        if let imageUrl = listing.imageUrl {
+                            print("👁️ Card image URL for \(listing.name): \(imageUrl)")
+                        } else {
+                            print("⚠️ No image URL for \(listing.name)")
                         }
                     }
-                }
             }
-            .padding()
             .frame(height: 160)
             .background(Color.white)
             .cornerRadius(12)
         }
         .buttonStyle(PlainButtonStyle())
-        .contextMenu {
-            Button(action: { onEdit(listing) }) {
-                Label("Edit", systemImage: "pencil")
-            }
-            
-            Button(role: .destructive, action: { onDelete(listing) }) {
-                Label("Delete", systemImage: "trash")
-            }
-        }
         .sheet(isPresented: $showingDetailView) {
             NavigationView {
                 ListingDetailView(listing: listing)
@@ -982,8 +2026,8 @@ import SwiftUI
 
 struct HeaderView: View {
     @ObservedObject var viewModel: ListingsViewModel
-    @State private var showingFilterSheet = false
-    @State private var showingAboutSheet = false
+    var onFilterTap: () -> Void
+    var onAboutTap: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -993,13 +2037,14 @@ struct HeaderView: View {
                     .font(.headline)
                     .fontWeight(.bold)
 
-                if viewModel.hasActiveFilters {
+                if viewModel.hasActiveFilters || viewModel.hasTagFilters {
                     HStack(spacing: 4) {
                         Image(systemName: "line.3.horizontal.decrease.circle.fill")
                             .foregroundColor(.blue)
                             .font(.caption)
                         
-                        let count = viewModel.activeFilterValues.values.filter { $0 }.count
+                        let count = viewModel.activeFilterValues.values.filter { $0 }.count 
+                                  + (viewModel.selectedTags.isEmpty ? 0 : 1)
                         Text("\(count)")
                             .font(.caption)
                             .foregroundColor(.blue)
@@ -1010,7 +2055,7 @@ struct HeaderView: View {
 
                 // Filter button
                 Button(action: {
-                    showingFilterSheet = true
+                    onFilterTap()
                 }) {
                     Image(systemName: "line.3.horizontal.decrease.circle")
                         .font(.headline)
@@ -1019,7 +2064,7 @@ struct HeaderView: View {
 
                 // More info about brizlist
                 Button(action: {
-                    showingAboutSheet = true
+                    onAboutTap()
                 }) {
                     Image(systemName: "questionmark.circle")
                         .font(.headline)
@@ -1035,6 +2080,104 @@ struct HeaderView: View {
                 .fill(Color.gray.opacity(0.3))
                 .frame(height: 1)
         }
+    }
+}
+
+#Preview {
+    HeaderView(
+        viewModel: ListingsViewModel(),
+        onFilterTap: {},
+        onAboutTap: {}
+    )
+}
+//
+//  PlaceholderImageView.swift
+//  brizlist_test1
+//
+//  Created by Stephen Dawes on 04/05/2025.
+//
+
+import SwiftUI
+
+struct PlaceholderImageView: View {
+    let aspectRatio: ContentMode
+    
+    init(aspectRatio: ContentMode = .fill) {
+        self.aspectRatio = aspectRatio
+    }
+    
+    var body: some View {
+        ZStack {
+            // Base color
+            Color.gray.opacity(0.2)
+            
+            // Food icon
+            VStack(spacing: 12) {
+                Image(systemName: "fork.knife")
+                    .font(.system(size: 40))
+                    .foregroundColor(.gray.opacity(0.7))
+                
+                Text("Image")
+                    .font(.caption)
+                    .foregroundColor(.gray.opacity(0.7))
+            }
+        }
+        .aspectRatio(contentMode: aspectRatio)
+    }
+}
+
+struct PlaceholderImageView_Previews: PreviewProvider {
+    static var previews: some View {
+        PlaceholderImageView()
+            .frame(width: 200, height: 200)
+    }
+} //
+//  ContentView.swift
+//  brizlist_test1
+//
+//  Created by Stephen Dawes on 13/03/2025.
+//
+
+import Foundation
+import SwiftUI
+
+struct ContentView: View {
+    @StateObject private var viewModel = ListingsViewModel()
+    @State private var showingFilterSheet = false
+    @State private var showingAboutSheet = false
+    
+    var body: some View {
+        ZStack {
+            // System grey color to match the header
+            Color(.systemGray6)  // This is the same color used in HeaderView
+                .ignoresSafeArea()
+
+            // Main content
+            VStack(spacing: 0) {
+                // Header
+                HeaderView(
+                    viewModel: viewModel,
+                    onFilterTap: { showingFilterSheet = true },
+                    onAboutTap: { showingAboutSheet = true }
+                )
+                
+                // Main scrolling content
+                ListingsScrollView(
+                    viewModel: viewModel,
+                    onFilterTap: { showingFilterSheet = true }
+                )
+            }
+        }
+        .onAppear {
+            viewModel.fetchListings()
+        }
+        .alert("Error", isPresented: $viewModel.showError, presenting: viewModel.errorMessage) { _ in
+            Button("OK") {
+                viewModel.showError = false
+            }
+        } message: { errorMessage in
+            Text(errorMessage)
+        }
         .sheet(isPresented: $showingFilterSheet, content: {
             FilterSheetView(viewModel: viewModel)
             .presentationDetents([.large])
@@ -1048,62 +2191,10 @@ struct HeaderView: View {
     }
 }
 
-#Preview {
-    HeaderView(viewModel: ListingsViewModel())
-}
-//
-//  ContentView.swift
-//  brizlist_test1
-//
-//  Created by Stephen Dawes on 13/03/2025.
-//
-
-import Foundation
-import SwiftUI
-
-struct ContentView: View {
-    @StateObject private var viewModel = ListingsViewModel()
-    @State private var showingAddListing = false
-    @State private var listingToEdit: Listing?
-    
-    var body: some View {
-        ZStack {
-            // System grey color to match the header
-            Color(.systemGray6)  // This is the same color used in HeaderView
-                .ignoresSafeArea()
-
-            // Main content
-            VStack(spacing: 0) {
-                HeaderView(viewModel: viewModel)
-                ListingsScrollView(viewModel: viewModel, listingToEdit: $listingToEdit)
-            }
-            
-            // Floating add button
-            FloatingAddButton(showingAddListing: $showingAddListing)
-        }
-        .onAppear {
-            viewModel.fetchListings()
-        }
-        .sheet(isPresented: $showingAddListing) {
-            AddListingView(viewModel: viewModel)
-        }
-        .sheet(item: $listingToEdit) { listing in
-            EditListingView(viewModel: viewModel, listing: listing)
-        }
-        .alert("Error", isPresented: $viewModel.showError, presenting: viewModel.errorMessage) { _ in
-            Button("OK") {
-                viewModel.showError = false
-            }
-        } message: { errorMessage in
-            Text(errorMessage)
-        }
-    }
-}
-
 // Extracted ScrollView into a separate view
 struct ListingsScrollView: View {
     @ObservedObject var viewModel: ListingsViewModel
-    @Binding var listingToEdit: Listing?
+    var onFilterTap: () -> Void
     
     var body: some View {
         ScrollView {
@@ -1135,14 +2226,11 @@ struct ListingsScrollView: View {
                         // Featured listings
                         ForEach(viewModel.featuredListings) { listing in
                             ListingCardView(
-                                listing: listing,
-                                onEdit: { listingToEdit = $0 },
-                                onDelete: { viewModel.deleteListing($0) }
+                                listing: listing
                             )
                             .padding(.horizontal)
                             .onAppear {
-                                if listing.id == viewModel.featuredListings.last?.id 
-                                   && listing.id == viewModel.listings.last?.id {
+                                if listing.id == viewModel.featuredListings.last?.id {
                                     viewModel.loadMoreListings()
                                 }
                             }
@@ -1163,9 +2251,7 @@ struct ListingsScrollView: View {
                 // Regular listings
                 ForEach(viewModel.listings) { listing in
                     ListingCardView(
-                        listing: listing,
-                        onEdit: { listingToEdit = $0 },
-                        onDelete: { viewModel.deleteListing($0) }
+                        listing: listing
                     )
                     .padding(.horizontal)
                     .onAppear {
@@ -1173,6 +2259,62 @@ struct ListingsScrollView: View {
                             viewModel.loadMoreListings()
                         }
                     }
+                }
+                
+                // No results message when filtering results in no matches
+                if viewModel.noResultsFromFiltering {
+                    VStack(spacing: 16) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 40))
+                            .foregroundColor(.gray)
+                            .padding(.bottom, 8)
+                        
+                        Text("No listings match all your filters")
+                            .font(.headline)
+                            .foregroundColor(.gray)
+                        
+                        Text("Try selecting fewer filters or a different combination")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+                        
+                        if !viewModel.selectedTags.isEmpty {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Selected tags:")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                                
+                                HStack {
+                                    ForEach(Array(viewModel.selectedTags), id: \.self) { tag in
+                                        Text(tag.capitalized)
+                                            .font(.caption)
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 4)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .fill(Color.blue.opacity(0.7))
+                                            )
+                                    }
+                                }
+                            }
+                            .padding(.top, 4)
+                        }
+                        
+                        Button("Adjust Filters") {
+                            // This will open the filter sheet
+                            onFilterTap()
+                        }
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 16)
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                        .padding(.top, 8)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 40)
                 }
                 
                 // Loading indicator and end of list message
@@ -1191,33 +2333,6 @@ struct ListingsScrollView: View {
             .padding(.bottom, 80)
         }
         .coordinateSpace(name: "refresh")
-    }
-}
-
-// Extracted Floating Add Button
-struct FloatingAddButton: View {
-    @Binding var showingAddListing: Bool
-    
-    var body: some View {
-        VStack {
-            Spacer()
-            HStack {
-                Spacer()
-                Button {
-                    showingAddListing = true
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(width: 30, height: 30)
-                        .background(Color.blue)
-                        .clipShape(Circle())
-                        .shadow(radius: 4)
-                }
-                .padding(.trailing, 20)
-                .padding(.bottom, 20)
-            }
-        }
     }
 }
 
@@ -1240,6 +2355,11 @@ struct FilterSheetView: View {
     
     // Local copy of filters for preview/editing
     @State private var localFilters: [String: Bool] = [:]
+    // Add a state for selected tags
+    @State private var localSelectedTags: Set<String> = []
+    // Add state to track if current selection would yield results
+    @State private var wouldYieldResults: Bool = true
+    @State private var isCheckingResults: Bool = false
     
     // Initialize with current filters
     init(viewModel: ListingsViewModel) {
@@ -1251,39 +2371,200 @@ struct FilterSheetView: View {
             initialFilters[filter.field] = viewModel.activeFilterValues[filter.field] ?? false
         }
         self._localFilters = State(initialValue: initialFilters)
+        self._localSelectedTags = State(initialValue: viewModel.selectedTags)
     }
     
     var body: some View {
         NavigationStack {
             Form {
-                Section(header: Text("Filter By")) {
-                    // Create a toggle for each available filter
-                    ForEach(viewModel.availableFilters, id: \.field) { filter in
-                        Toggle(filter.displayName, isOn: Binding(
-                            get: { localFilters[filter.field] ?? false },
-                            set: { localFilters[filter.field] = $0 }
-                        ))
+                // Tag filter section
+                Section(header: Text("Filter by Tags")) {
+                    // Use a static list of all possible tags instead of getting from current results
+                    let allPossibleTags = ["bakery", "cafe", "store", "wine bar", "pizzeria", "pub", "restaurant", "coffee shop"]
+                    
+                    // Calculate left and right columns
+                    let leftColumnTags = stride(from: 0, to: allPossibleTags.count, by: 2).map { allPossibleTags[min($0, allPossibleTags.count - 1)] }
+                    let rightColumnTags = stride(from: 1, to: allPossibleTags.count, by: 2).map { allPossibleTags[min($0, allPossibleTags.count - 1)] }
+                    let maxCount = max(leftColumnTags.count, rightColumnTags.count)
+                    
+                    // Create the grid container
+                    HStack(alignment: .top, spacing: 0) {
+                        // Left column
+                        VStack(spacing: 12) {
+                            ForEach(0..<maxCount, id: \.self) { index in
+                                if index < leftColumnTags.count {
+                                    tagToggleRow(tag: leftColumnTags[index], 
+                                               isSelected: localSelectedTags.contains(leftColumnTags[index])) { isOn in
+                                        if isOn {
+                                            localSelectedTags.insert(leftColumnTags[index])
+                                        } else {
+                                            localSelectedTags.remove(leftColumnTags[index])
+                                        }
+                                    }
+                                } else {
+                                    // Empty cell for alignment
+                                    Spacer()
+                                        .frame(height: 24)
+                                }
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        
+                        // Center divider
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(width: 1)
+                            .padding(.vertical, 4)
+                        
+                        // Right column
+                        VStack(spacing: 12) {
+                            ForEach(0..<maxCount, id: \.self) { index in
+                                if index < rightColumnTags.count {
+                                    tagToggleRow(tag: rightColumnTags[index], 
+                                               isSelected: localSelectedTags.contains(rightColumnTags[index])) { isOn in
+                                        if isOn {
+                                            localSelectedTags.insert(rightColumnTags[index])
+                                        } else {
+                                            localSelectedTags.remove(rightColumnTags[index])
+                                        }
+                                    }
+                                } else {
+                                    // Empty cell for alignment
+                                    Spacer()
+                                        .frame(height: 24)
+                                }
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.leading, 16) // Add more space at the start of the right column
                     }
+                    .padding(.vertical, 8)
+                }
+                
+                Section(header: Text("Filter By Amenities")) {
+                    // Create two columns for amenity filters
+                    let filters = viewModel.availableFilters
+                    let leftFilters = stride(from: 0, to: filters.count, by: 2).map { filters[min($0, filters.count - 1)] }
+                    let rightFilters = stride(from: 1, to: filters.count, by: 2).map { filters[min($0, filters.count - 1)] }
+                    let maxCount = max(leftFilters.count, rightFilters.count)
+                    
+                    // Create the grid container
+                    HStack(alignment: .top, spacing: 0) {
+                        // Left column
+                        VStack(spacing: 12) {
+                            ForEach(0..<maxCount, id: \.self) { index in
+                                if index < leftFilters.count {
+                                    amenityToggleRow(filter: leftFilters[index], 
+                                                   isSelected: localFilters[leftFilters[index].field] ?? false) { isOn in
+                                        localFilters[leftFilters[index].field] = isOn
+                                    }
+                                } else {
+                                    // Empty cell for alignment
+                                    Spacer()
+                                        .frame(height: 24)
+                                }
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        
+                        // Center divider
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(width: 1)
+                            .padding(.vertical, 4)
+                        
+                        // Right column
+                        VStack(spacing: 12) {
+                            ForEach(0..<maxCount, id: \.self) { index in
+                                if index < rightFilters.count {
+                                    amenityToggleRow(filter: rightFilters[index], 
+                                                   isSelected: localFilters[rightFilters[index].field] ?? false) { isOn in
+                                        localFilters[rightFilters[index].field] = isOn
+                                    }
+                                } else {
+                                    // Empty cell for alignment
+                                    Spacer()
+                                        .frame(height: 24)
+                                }
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.leading, 16) // Add more space at the start of the right column
+                    }
+                    .padding(.vertical, 8)
                 }
                 
                 Section {
+                    // Explain the filtering logic to users
+                    if localSelectedTags.count > 1 || localFilters.values.contains(true) {
+                        HStack(alignment: .top, spacing: 12) {
+                            Image(systemName: "info.circle.fill")
+                                .foregroundColor(.blue)
+                                .padding(.top, 2)
+                            
+                            Text("Selected filters work as 'AND' conditions - listings must match ALL selected criteria")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    
+                    // Show warning if the filter combination wouldn't yield results
+                    if !wouldYieldResults {
+                        HStack(alignment: .top, spacing: 12) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.orange)
+                                .padding(.top, 2)
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("No listings match all selected criteria")
+                                    .foregroundColor(.orange)
+                                    .font(.callout)
+                                    .fontWeight(.medium)
+                                
+                                Text("Try selecting fewer filters or a different combination")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .padding(.vertical, 8)
+                    }
+                    
                     // Apply button applies all filters at once
                     Button("Apply Filters") {
                         // Update the view model with our local changes
                         for filter in viewModel.availableFilters {
                             viewModel.activeFilterValues[filter.field] = localFilters[filter.field] ?? false
                         }
+                        
+                        // Update selected tags
+                        viewModel.selectedTags = localSelectedTags
+                        
                         viewModel.fetchListings()
                         dismiss()
                     }
                     .buttonStyle(.borderedProminent)
                     .frame(maxWidth: .infinity)
+                    .disabled(isCheckingResults || (!wouldYieldResults && (localSelectedTags.count > 0 || localFilters.values.contains(true))))
+                    .opacity(wouldYieldResults ? 1.0 : 0.5)
                     
                     // Clear all button
-                    Button("Clear All Filters") {
+                    Button("Clear All Filters and Apply") {
+                        // Clear all local filters
                         for filter in viewModel.availableFilters {
                             localFilters[filter.field] = false
                         }
+                        localSelectedTags.removeAll()
+                        
+                        // Apply changes to view model
+                        for filter in viewModel.availableFilters {
+                            viewModel.activeFilterValues[filter.field] = false
+                        }
+                        viewModel.selectedTags.removeAll()
+                        
+                        // Refresh and dismiss
+                        viewModel.fetchListings()
+                        dismiss()
                     }
                     .buttonStyle(.bordered)
                     .frame(maxWidth: .infinity)
@@ -1291,6 +2572,98 @@ struct FilterSheetView: View {
             }
             .navigationTitle("Filters")
             .navigationBarTitleDisplayMode(.inline)
+            .onChange(of: localFilters) { checkFilterResults() }
+            .onChange(of: localSelectedTags) { checkFilterResults() }
+            .onAppear { checkFilterResults() }
+        }
+    }
+    
+    // Add this function to check if filters would yield results
+    private func checkFilterResults() {
+        // Only check if there are actual filters applied
+        let hasFilters = localSelectedTags.count > 0 || localFilters.values.contains(true)
+        
+        if hasFilters {
+            isCheckingResults = true
+            // Use a background thread to not block the UI
+            DispatchQueue.global(qos: .userInitiated).async {
+                let hasResults = viewModel.wouldFiltersYieldResults(tags: localSelectedTags, amenities: localFilters)
+                // Update UI on main thread
+                DispatchQueue.main.async {
+                    self.wouldYieldResults = hasResults
+                    self.isCheckingResults = false
+                }
+            }
+        } else {
+            // If no filters, we'll definitely have results
+            wouldYieldResults = true
+            isCheckingResults = false
+        }
+    }
+    
+    // Helper to create a consistent tag toggle row
+    private func tagToggleRow(tag: String, isSelected: Bool, onToggle: @escaping (Bool) -> Void) -> some View {
+        HStack {
+            Text(tag.capitalized)
+                .font(.subheadline)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            
+            Spacer(minLength: 2) // Reduce minimum spacing to bring toggle closer to text
+            
+            // Compact toggle
+            Toggle("", isOn: Binding(
+                get: { isSelected },
+                set: { onToggle($0) }
+            ))
+            .toggleStyle(CompactToggleStyle())
+            .frame(width: 36) // Slightly smaller width
+        }
+        .padding(.trailing, 16) // Add right padding to move toggles away from divider
+    }
+    
+    // Helper to create a consistent amenity toggle row
+    private func amenityToggleRow(filter: ListingsViewModel.FilterOption, isSelected: Bool, onToggle: @escaping (Bool) -> Void) -> some View {
+        HStack {
+            Text(filter.displayName)
+                .font(.subheadline)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            
+            Spacer(minLength: 2) // Reduce minimum spacing to bring toggle closer to text
+            
+            // Compact toggle
+            Toggle("", isOn: Binding(
+                get: { isSelected },
+                set: { onToggle($0) }
+            ))
+            .toggleStyle(CompactToggleStyle())
+            .frame(width: 36) // Slightly smaller width
+        }
+        .padding(.trailing, 16) // Add right padding to move toggles away from divider
+    }
+}
+
+// Custom compact toggle style
+struct CompactToggleStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack {
+            configuration.label
+            
+            RoundedRectangle(cornerRadius: 16)
+                .fill(configuration.isOn ? Color.blue : Color(.systemGray5))
+                .frame(width: 36, height: 20)
+                .overlay(
+                    Circle()
+                        .fill(Color.white)
+                        .padding(2)
+                        .offset(x: configuration.isOn ? 8 : -8)
+                )
+                .onTapGesture {
+                    withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
+                        configuration.isOn.toggle()
+                    }
+                }
         }
     }
 }

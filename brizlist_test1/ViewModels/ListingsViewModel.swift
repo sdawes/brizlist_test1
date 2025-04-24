@@ -18,6 +18,8 @@ class ListingsViewModel: ObservableObject {
     @Published private(set) var hasMoreListings = true
     @Published var errorMessage: String?
     @Published var showError: Bool = false
+    @Published var selectedTags: Set<String> = []
+    @Published var noResultsFromFiltering: Bool = false
     
     private let db = Firestore.firestore()
     private let pageSize = 20
@@ -78,6 +80,11 @@ class ListingsViewModel: ObservableObject {
         activeFilterValues.values.contains(true)
     }
     
+    // Add this helper property to check if tag filtering is active
+    var hasTagFilters: Bool {
+        return !selectedTags.isEmpty
+    }
+    
     // MARK: - Private Helpers
     // ================================
 
@@ -86,9 +93,23 @@ class ListingsViewModel: ObservableObject {
     }
     
     private func createBaseQuery() -> Query {
-        var query = db.collection("listings").order(by: "name")
+        // Start with CollectionReference and then convert to Query
+        let collectionRef = db.collection("listings")
+        var query: Query = collectionRef.order(by: "name")
         
-        // Apply all active filters
+        // Filter by tags if any are selected
+        if !selectedTags.isEmpty {
+            // For "AND" tag filtering, we need to check that each document contains all selected tags
+            // We'll use multiple array-contains queries in combination with filter client-side
+            
+            // Start with the first tag (we need at least one in the Firestore query)
+            let tagsArray = Array(selectedTags)
+            query = query.whereField("tags", arrayContains: tagsArray[0])
+            
+            // We'll need to filter the rest of the tags client-side in processQueryResults
+        }
+        
+        // Apply all other active filters (your existing code)
         for (field, isActive) in activeFilterValues {
             if isActive {
                 query = query.whereField(field, isEqualTo: true)
@@ -128,19 +149,65 @@ class ListingsViewModel: ObservableObject {
             return
         }
         
-        guard let documents = snapshot?.documents, !documents.isEmpty else {
+        // Check if we have any filters active 
+        let hasActiveFilters = self.hasActiveFilters || self.hasTagFilters
+        
+        guard let documents = snapshot?.documents else {
             hasMoreListings = false
             if isInitialFetch {
                 listings = []
                 featuredListings = []
+                
+                // Set the noResultsFromFiltering flag if we have filters but no results
+                noResultsFromFiltering = hasActiveFilters
             }
             return
         }
         
-        lastDocument = documents.last
+        // Additional client-side filtering if we have multiple tags
+        // (Firestore can only query for one array-contains at a time)
+        var filteredDocuments = documents
+        if selectedTags.count > 1 {
+            let allTags = Array(selectedTags)
+            // Skip the first tag as it was already filtered in the query
+            let additionalTags = allTags.dropFirst()
+            
+            // Filter documents to contain ALL the selected tags (AND operation)
+            filteredDocuments = documents.filter { document in
+                guard let documentTags = document.data()["tags"] as? [String] else {
+                    return false
+                }
+                
+                // Check that all additional tags are present in the document
+                for tag in additionalTags {
+                    if !documentTags.contains(tag) {
+                        return false
+                    }
+                }
+                return true
+            }
+        }
+        
+        // Check if we have results after client-side filtering
+        if filteredDocuments.isEmpty {
+            hasMoreListings = false
+            if isInitialFetch {
+                listings = []
+                featuredListings = []
+                
+                // Set the noResultsFromFiltering flag
+                noResultsFromFiltering = hasActiveFilters
+            }
+            return
+        }
+        
+        // Found results, so reset the no results flag
+        noResultsFromFiltering = false
+        
+        lastDocument = documents.last // Keep the original last document for pagination
         hasMoreListings = documents.count >= pageSize
         
-        let newListings = documents.compactMap(createListingFromDocument)
+        let newListings = filteredDocuments.compactMap(createListingFromDocument)
         
         let (featured, regular) = separateFeaturedListings(newListings)
         
@@ -159,7 +226,7 @@ class ListingsViewModel: ObservableObject {
         return Listing(
             id: document.documentID,
             name: data["name"] as? String ?? "",
-            category: data["category"] as? String ?? "",
+            tags: data["tags"] as? [String] ?? [],
             cuisine: data["cuisine"] as? String ?? "",
             description: data["description"] as? String ?? "",
             location: data["location"] as? String ?? "",
@@ -193,5 +260,111 @@ class ListingsViewModel: ObservableObject {
         }
         
         return (featured, regular)
+    }
+    
+    // Add these methods to manage tag selection
+    func selectTag(_ tag: String) {
+        selectedTags.insert(tag)
+        fetchListings() // Refresh listings with the new filter
+    }
+
+    func deselectTag(_ tag: String) {
+        selectedTags.remove(tag)
+        fetchListings() // Refresh listings with the new filter
+    }
+
+    func toggleTag(_ tag: String) {
+        if selectedTags.contains(tag) {
+            selectedTags.remove(tag)
+        } else {
+            selectedTags.insert(tag)
+        }
+        fetchListings() // Refresh listings with the new filter
+    }
+
+    func clearTagFilters() {
+        selectedTags.removeAll()
+        fetchListings() // Refresh listings with the new filter
+    }
+
+    // You can also add this method to get all unique tags from current listings
+    func getAllUniqueTags() -> [String] {
+        var allTags = Set<String>()
+        
+        // Collect tags from all listings
+        for listing in listings {
+            allTags.formUnion(listing.tags)
+        }
+        
+        for listing in featuredListings {
+            allTags.formUnion(listing.tags)
+        }
+        
+        return Array(allTags).sorted()
+    }
+
+    // Add a new method to check if a filter combination would yield results
+    func wouldFiltersYieldResults(tags: Set<String>, amenities: [String: Bool]) -> Bool {
+        // If no filters selected, we'll have results
+        if tags.isEmpty && !amenities.values.contains(true) {
+            return true
+        }
+        
+        // Create a base query - start with CollectionReference and then convert to Query
+        let collectionRef = db.collection("listings")
+        var query: Query = collectionRef
+        
+        // Apply amenity filters (AND operation - must match all)
+        for (field, isActive) in amenities {
+            if isActive {
+                query = query.whereField(field, isEqualTo: true)
+            }
+        }
+        
+        // For tags, we need to handle the AND operation differently
+        // We'll do the first tag in Firestore and the rest client-side
+        if !tags.isEmpty {
+            let tagsArray = Array(tags)
+            query = query.whereField("tags", arrayContains: tagsArray[0])
+        }
+        
+        // Use a semaphore to make this synchronous
+        let semaphore = DispatchSemaphore(value: 0)
+        var hasResults = false
+        
+        query.limit(to: 20).getDocuments { snapshot, error in
+            if let documents = snapshot?.documents {
+                // If we have multiple tags, filter client-side to ensure all tags match
+                if tags.count > 1 {
+                    let allTags = Array(tags)
+                    let additionalTags = allTags.dropFirst() // Skip first tag (already filtered)
+                    
+                    // Check for documents with ALL the selected tags
+                    let matchingDocs = documents.filter { document in
+                        guard let documentTags = document.data()["tags"] as? [String] else {
+                            return false
+                        }
+                        
+                        // Document must contain ALL additional tags
+                        for tag in additionalTags {
+                            if !documentTags.contains(tag) {
+                                return false
+                            }
+                        }
+                        return true
+                    }
+                    
+                    hasResults = !matchingDocs.isEmpty
+                } else {
+                    // If just one tag or no tags, the Firestore query is sufficient
+                    hasResults = !documents.isEmpty
+                }
+            }
+            semaphore.signal()
+        }
+        
+        // Wait for the result
+        _ = semaphore.wait(timeout: .now() + 2.0)
+        return hasResults
     }
 }

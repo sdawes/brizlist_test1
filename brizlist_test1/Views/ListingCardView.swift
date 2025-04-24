@@ -14,6 +14,10 @@ struct ListingCardView: View {
     var body: some View {
         Button(action: {
             showingDetailView = true
+            // Print image URL for debugging
+            if let imageUrl = listing.imageUrl {
+                print("📱 Listing Card for \(listing.name) has imageUrl: \(imageUrl)")
+            }
         }) {
             // Card structure without symbol margin
             ZStack(alignment: .top) {
@@ -52,12 +56,15 @@ struct ListingCardView: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.bottom, 12)
-                .padding(.top, 40) // Space for the category row above
+                .padding(.top, 40) // Space for the tags row above
                 .frame(maxWidth: .infinity, alignment: .leading)
                 
-                // Category and cuisine row - positioned at the very top
+                // Tags and cuisine row - positioned at the very top
                 HStack {
-                    ListingStyling.categoryPill(listing.category)
+                    // Only show tags if available
+                    if !listing.tags.isEmpty {
+                        ListingStyling.tagsView(tags: listing.tags)
+                    }
                     
                     // Only show cuisine if it's not empty
                     if !listing.cuisine.isEmpty {
@@ -75,12 +82,19 @@ struct ListingCardView: View {
                 .zIndex(1)
                 
                 // Floating image box - vertically centered
-                RemoteImage(url: listing.imageUrl)
+                FirebaseStorageImage(urlString: listing.imageUrl)
                     .frame(width: 120, height: 120)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                     .padding(.trailing, 12)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
                     .zIndex(2)
+                    .onAppear {
+                        if let imageUrl = listing.imageUrl {
+                            print("👁️ Card image URL for \(listing.name): \(imageUrl)")
+                        } else {
+                            print("⚠️ No image URL for \(listing.name)")
+                        }
+                    }
             }
             .frame(height: 160)
             .background(Color.white)

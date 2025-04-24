@@ -10,8 +10,8 @@ import SwiftUI
 
 struct HeaderView: View {
     @ObservedObject var viewModel: ListingsViewModel
-    @State private var showingFilterSheet = false
-    @State private var showingAboutSheet = false
+    var onFilterTap: () -> Void
+    var onAboutTap: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -21,13 +21,14 @@ struct HeaderView: View {
                     .font(.headline)
                     .fontWeight(.bold)
 
-                if viewModel.hasActiveFilters {
+                if viewModel.hasActiveFilters || viewModel.hasTagFilters {
                     HStack(spacing: 4) {
                         Image(systemName: "line.3.horizontal.decrease.circle.fill")
                             .foregroundColor(.blue)
                             .font(.caption)
                         
-                        let count = viewModel.activeFilterValues.values.filter { $0 }.count
+                        let count = viewModel.activeFilterValues.values.filter { $0 }.count 
+                                  + (viewModel.selectedTags.isEmpty ? 0 : 1)
                         Text("\(count)")
                             .font(.caption)
                             .foregroundColor(.blue)
@@ -38,7 +39,7 @@ struct HeaderView: View {
 
                 // Filter button
                 Button(action: {
-                    showingFilterSheet = true
+                    onFilterTap()
                 }) {
                     Image(systemName: "line.3.horizontal.decrease.circle")
                         .font(.headline)
@@ -47,7 +48,7 @@ struct HeaderView: View {
 
                 // More info about brizlist
                 Button(action: {
-                    showingAboutSheet = true
+                    onAboutTap()
                 }) {
                     Image(systemName: "questionmark.circle")
                         .font(.headline)
@@ -63,19 +64,13 @@ struct HeaderView: View {
                 .fill(Color.gray.opacity(0.3))
                 .frame(height: 1)
         }
-        .sheet(isPresented: $showingFilterSheet, content: {
-            FilterSheetView(viewModel: viewModel)
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
-        })
-        .sheet(isPresented: $showingAboutSheet, content: {
-            AboutSheetView()
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
-        })
     }
 }
 
 #Preview {
-    HeaderView(viewModel: ListingsViewModel())
+    HeaderView(
+        viewModel: ListingsViewModel(),
+        onFilterTap: {},
+        onAboutTap: {}
+    )
 }

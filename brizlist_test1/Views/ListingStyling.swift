@@ -10,13 +10,7 @@ import SwiftUI
 
 struct ListingStyling {
     
-    // MARK: - Category Styling
-    
-    static func categoryTextView(_ category: String) -> some View {
-        Text(category.lowercased())
-            .font(.caption)
-            .foregroundColor(.black)
-    }
+
     
     
 
@@ -104,58 +98,44 @@ struct ListingStyling {
 
     
 
-    // MARK: - Category Pill
-
-    static func categoryPill(_ category: String) -> some View {
-        let systemName: String
-        let color: Color
-        
-        switch category.lowercased() {
-        case "pub", "bar":
-            systemName = "mug.fill"
-            color = Color(red: 0.13, green: 0.55, blue: 0.13) // Deep forest green
-        case "restaurant", "bistro":
-            systemName = "fork.knife"
-            color = Color(red: 0.75, green: 0.0, blue: 0.0) // Deep crimson red
-        case "café", "cafe", "coffee shop":
-            systemName = "cup.and.saucer.fill"
-            color = Color(red: 0.0, green: 0.35, blue: 0.65) // Rich navy blue
-        case "bakery":
-            systemName = "birthday.cake.fill"
-            color = Color(red: 0.65, green: 0.16, blue: 0.43) // Deep magenta
-        case "deli", "food market":
-            systemName = "basket.fill"
-            color = Color(red: 0.55, green: 0.27, blue: 0.07) // Rich brown
-        case "takeaway", "fast food":
-            systemName = "bag.fill"
-            color = Color(red: 0.85, green: 0.53, blue: 0.0) // Deep amber/orange
-        default:
-            systemName = "mappin"
-            color = Color(red: 0.35, green: 0.35, blue: 0.35) // Dark charcoal
-        }
-        
-        return HStack(spacing: 6) {
-            Image(systemName: systemName)
-                .font(.caption2)
-            
-            Text(category.uppercased())
-                .font(.caption2)
-                .fontWeight(.semibold)
-        }
-        .foregroundColor(.white)
-        .padding(.vertical, 4)
-        .padding(.horizontal, 8)
-        .background(
-            Capsule()
-                .fill(color)
-        )
-    }
 
     // MARK: - Featured Symbol
     static func featuredSymbol() -> some View {
         Image(systemName: "medal.fill")
             .font(.system(size: 12))
             .foregroundColor(.white)
+    }
+
+    // MARK: - Tag Pills
+
+    static func tagPill(_ tag: String) -> some View {
+        return Text(tag.uppercased())
+            .font(.caption2)
+            .fontWeight(.medium)
+            .foregroundColor(.black)
+            .padding(.vertical, 3)
+            .padding(.horizontal, 8)
+            .background(
+                Capsule()
+                    .fill(Color(red: 0.93, green: 0.87, blue: 0.76)) // Light oak cream color
+            )
+    }
+
+    // Helper function for backward compatibility
+    static func styleForTag(_ tag: String) -> (systemName: String, color: Color) {
+        // All tags now use the same style, but keeping method for backward compatibility
+        return ("", Color(red: 0.93, green: 0.87, blue: 0.76)) // Light oak cream color
+    }
+
+    // View for displaying multiple tags horizontally
+    static func tagsView(tags: [String]) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 4) {
+                ForEach(tags, id: \.self) { tag in
+                    tagPill(tag)
+                }
+            }
+        }
     }
 
 }

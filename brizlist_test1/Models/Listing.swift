@@ -11,7 +11,7 @@ import FirebaseFirestore
 struct Listing: Identifiable, Codable {
     @DocumentID var id: String? // Optional because Firebase generates this automatically
     var name: String
-    var category: String
+    var tags: [String]
     var cuisine: String // Changed from subCategory to cuisine
     var description: String
     var location: String
@@ -23,11 +23,17 @@ struct Listing: Identifiable, Codable {
     var isSundayLunch: Bool?
     var isFeatured: Bool?
     
+    // Helper to get a displayable URL
+    var displayImageUrl: URL? {
+        guard let urlString = imageUrl else { return nil }
+        return URL(string: urlString)
+    }
+    
     // Updated initializer with consistent required/optional parameters
-    init(id: String? = nil, name: String, category: String, cuisine: String = "", description: String, location: String, imageUrl: String? = nil, isBrizPick: Bool? = nil, isVeg: Bool? = nil, isDog: Bool? = nil, isChild: Bool? = nil, isSundayLunch: Bool? = nil, isFeatured: Bool? = nil) {
+    init(id: String? = nil, name: String, tags: [String] = [], cuisine: String = "", description: String, location: String, imageUrl: String? = nil, isBrizPick: Bool? = nil, isVeg: Bool? = nil, isDog: Bool? = nil, isChild: Bool? = nil, isSundayLunch: Bool? = nil, isFeatured: Bool? = nil) {
         self.id = id
         self.name = name
-        self.category = category
+        self.tags = tags
         self.cuisine = cuisine
         self.description = description
         self.location = location

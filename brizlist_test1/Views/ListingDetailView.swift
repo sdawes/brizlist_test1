@@ -15,16 +15,31 @@ struct ListingDetailView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    // Hero image at the top
+                    if let imageUrl = listing.imageUrl {
+                        FirebaseStorageImage(urlString: imageUrl)
+                            .frame(height: 220)
+                            .clipped()
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .shadow(radius: 2)
+                            .onAppear {
+                                print("📷 Detail view loading image: \(imageUrl)")
+                            }
+                    }
+                    
                     Text(listing.name)
                         .font(.title3.bold())
                     
                     HStack {
-                        Text(listing.category)
-                            .font(.caption)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.gray.opacity(0.2))
-                            .cornerRadius(4)
+                        if !listing.tags.isEmpty {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 4) {
+                                    ForEach(listing.tags, id: \.self) { tag in
+                                        ListingStyling.tagPill(tag)
+                                    }
+                                }
+                            }
+                        }
                         
                         if !listing.cuisine.isEmpty {
                             Text(listing.cuisine)
@@ -33,14 +48,38 @@ struct ListingDetailView: View {
                         }
                     }
                     
-                    Text("A beloved local spot that's been serving Bristol for years. Known for their exceptional service and welcoming atmosphere, this place has become a cornerstone of the community.")
-                        .font(.caption)
+                    // Use the actual description if available
+                    if !listing.description.isEmpty {
+                        Text(listing.description)
+                            .font(.caption)
+                    } else {
+                        // Fallback description
+                        Text("A beloved local spot that's been serving Bristol for years. Known for their exceptional service and welcoming atmosphere, this place has become a cornerstone of the community.")
+                            .font(.caption)
+                        
+                        Text("Whether you're stopping by for a quick visit or settling in for a longer stay, you'll find yourself surrounded by the warm, authentic vibe that makes Bristol's food scene so special.")
+                            .font(.caption)
+                        
+                        Text("Make sure to check out their seasonal specials and don't forget to ask about their house recommendations!")
+                            .font(.caption)
+                    }
                     
-                    Text("Whether you're stopping by for a quick visit or settling in for a longer stay, you'll find yourself surrounded by the warm, authentic vibe that makes Bristol's food scene so special.")
-                        .font(.caption)
-                    
-                    Text("Make sure to check out their seasonal specials and don't forget to ask about their house recommendations!")
-                        .font(.caption)
+                    // Location information
+                    if !listing.location.isEmpty {
+                        Divider()
+                        
+                        Text("Location")
+                            .font(.title3.bold())
+                            
+                        HStack(spacing: 8) {
+                            Image(systemName: "location.circle.fill")
+                                .foregroundColor(.black)
+                                .font(.caption)
+                                .frame(width: 20, alignment: .center)
+                            Text(listing.location)
+                                .font(.caption)
+                        }
+                    }
                     
                     Divider()
                     
@@ -81,7 +120,7 @@ struct ListingDetailView: View {
     ListingDetailView(listing: Listing(
         id: "1",
         name: "The Bristol Lounge",
-        category: "Restaurant",
+        tags: ["restaurant", "italian"],
         cuisine: "Italian",
         description: "A cozy spot in the heart of Bristol",
         location: "Clifton, Bristol"
