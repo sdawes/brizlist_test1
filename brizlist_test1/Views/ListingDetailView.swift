@@ -22,9 +22,6 @@ struct ListingDetailView: View {
                             .clipped()
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                             .shadow(radius: 2)
-                            .onAppear {
-                                print("📷 Detail view loading image: \(imageUrl)")
-                            }
                     }
                     
                     Text(listing.name)

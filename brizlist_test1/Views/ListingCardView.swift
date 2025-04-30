@@ -14,10 +14,6 @@ struct ListingCardView: View {
     var body: some View {
         Button(action: {
             showingDetailView = true
-            // Print image URL for debugging
-            if let imageUrl = listing.imageUrl {
-                print("📱 Listing Card for \(listing.name) has imageUrl: \(imageUrl)")
-            }
         }) {
             // Card structure without symbol margin
             ZStack(alignment: .top) {
@@ -88,13 +84,6 @@ struct ListingCardView: View {
                     .padding(.trailing, 12)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
                     .zIndex(2)
-                    .onAppear {
-                        if let imageUrl = listing.imageUrl {
-                            print("👁️ Card image URL for \(listing.name): \(imageUrl)")
-                        } else {
-                            print("⚠️ No image URL for \(listing.name)")
-                        }
-                    }
             }
             .frame(height: 160)
             .background(Color.white)
