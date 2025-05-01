@@ -94,4 +94,15 @@ struct ListingStyling {
         }
     }
 
+    // Adding a new method with updated name for future use
+    static func typeFiltersView(typeFilters: [String]) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 4) {
+                ForEach(typeFilters, id: \.self) { filter in
+                    tagPill(filter)
+                }
+            }
+        }
+    }
+
 }

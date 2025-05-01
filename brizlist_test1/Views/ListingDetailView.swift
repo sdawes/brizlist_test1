@@ -7,9 +7,37 @@
 
 import SwiftUI
 
+// TagView component for displaying tags
+struct TagView: View {
+    let tag: String
+    
+    var body: some View {
+        Text(tag)
+            .font(.caption2)
+            .fontWeight(.medium)
+            .foregroundColor(.black)
+            .padding(.vertical, 2)
+            .padding(.horizontal, 6)
+            .background(Capsule().fill(Color(red: 0.93, green: 0.87, blue: 0.76)))
+    }
+}
+
 struct ListingDetailView: View {
     let listing: Listing
     @Environment(\.dismiss) var dismiss
+    
+    // Example dummy data for previews
+    static let previewListing = Listing(
+        id: "123",
+        name: "Pasta Loco",
+        typeFilters: ["restaurant", "italian"],
+        cuisine: "Italian",
+        shortDescription: "A cozy spot in the heart of Bristol",
+        location: "Bristol",
+        imageUrl: "https://example.com/image.jpg",
+        isBrizPick: true,
+        isFeatured: false
+    )
     
     var body: some View {
         NavigationStack {
@@ -28,14 +56,15 @@ struct ListingDetailView: View {
                         .font(.title3.bold())
                     
                     HStack {
-                        if !listing.tags.isEmpty {
+                        if !listing.typeFilters.isEmpty {
                             ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 4) {
-                                    ForEach(listing.tags, id: \.self) { tag in
-                                        ListingStyling.tagPill(tag)
+                                HStack(spacing: 8) {
+                                    ForEach(listing.typeFilters, id: \.self) { tag in
+                                        TagView(tag: tag.capitalized)
                                     }
                                 }
                             }
+                            .padding(.bottom, 8)
                         }
                         
                         if !listing.cuisine.isEmpty {
@@ -45,10 +74,12 @@ struct ListingDetailView: View {
                         }
                     }
                     
-                    // Use the actual description if available
-                    if !listing.description.isEmpty {
-                        Text(listing.description)
-                            .font(.caption)
+                    // Description
+                    if !listing.shortDescription.isEmpty {
+                        Text(listing.shortDescription)
+                            .font(.body)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.bottom, 16)
                     } else {
                         // Fallback description
                         Text("A beloved local spot that's been serving Bristol for years. Known for their exceptional service and welcoming atmosphere, this place has become a cornerstone of the community.")
@@ -117,9 +148,9 @@ struct ListingDetailView: View {
     ListingDetailView(listing: Listing(
         id: "1",
         name: "The Bristol Lounge",
-        tags: ["restaurant", "italian"],
+        typeFilters: ["restaurant", "italian"],
         cuisine: "Italian",
-        description: "A cozy spot in the heart of Bristol",
+        shortDescription: "A cozy spot in the heart of Bristol",
         location: "Clifton, Bristol"
     ))
 }

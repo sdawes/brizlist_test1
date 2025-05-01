@@ -102,7 +102,7 @@ class ListingsViewModel: ObservableObject {
             
             // Start with the first tag (we need at least one in the Firestore query)
             let tagsArray = Array(selectedTags)
-            query = query.whereField("tags", arrayContains: tagsArray[0])
+            query = query.whereField("typeFilters", arrayContains: tagsArray[0])
             
             // We'll need to filter the rest of the tags client-side in processQueryResults
         }
@@ -172,7 +172,7 @@ class ListingsViewModel: ObservableObject {
             
             // Filter documents to contain ALL the selected tags (AND operation)
             filteredDocuments = documents.filter { document in
-                guard let documentTags = document.data()["tags"] as? [String] else {
+                guard let documentTags = document.data()["typeFilters"] as? [String] else {
                     return false
                 }
                 
@@ -225,9 +225,9 @@ class ListingsViewModel: ObservableObject {
         return Listing(
             id: document.documentID,
             name: data["name"] as? String ?? "",
-            tags: data["tags"] as? [String] ?? [],
+            typeFilters: data["typeFilters"] as? [String] ?? [],
             cuisine: data["cuisine"] as? String ?? "",
-            description: data["description"] as? String ?? "",
+            shortDescription: data["shortDescription"] as? String ?? "",
             location: data["location"] as? String ?? "",
             imageUrl: data["imageUrl"] as? String,
             isBrizPick: data["isBrizPick"] as? Bool,
@@ -288,11 +288,11 @@ class ListingsViewModel: ObservableObject {
         
         // Collect tags from all listings
         for listing in listings {
-            allTags.formUnion(listing.tags)
+            allTags.formUnion(listing.typeFilters)
         }
         
         for listing in featuredListings {
-            allTags.formUnion(listing.tags)
+            allTags.formUnion(listing.typeFilters)
         }
         
         return Array(allTags).sorted()
@@ -320,7 +320,7 @@ class ListingsViewModel: ObservableObject {
         // We'll do the first tag in Firestore and the rest client-side
         if !tags.isEmpty {
             let tagsArray = Array(tags)
-            query = query.whereField("tags", arrayContains: tagsArray[0])
+            query = query.whereField("typeFilters", arrayContains: tagsArray[0])
         }
         
         // Use a semaphore to make this synchronous
@@ -336,7 +336,7 @@ class ListingsViewModel: ObservableObject {
                     
                     // Check for documents with ALL the selected tags
                     let matchingDocs = documents.filter { document in
-                        guard let documentTags = document.data()["tags"] as? [String] else {
+                        guard let documentTags = document.data()["typeFilters"] as? [String] else {
                             return false
                         }
                         

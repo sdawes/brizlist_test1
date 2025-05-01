@@ -35,8 +35,8 @@ struct ListingCardView: View {
                     // Tags and cuisine row - now placed below the name
                     HStack {
                         // Only show tags if available
-                        if !listing.tags.isEmpty {
-                            ListingStyling.tagsView(tags: listing.tags)
+                        if !listing.typeFilters.isEmpty {
+                            ListingStyling.tagsView(tags: listing.typeFilters)
                         }
                         
                         // Only show cuisine if it's not empty
@@ -52,8 +52,8 @@ struct ListingCardView: View {
                     .padding(.top, 8)
                     
                     // Description (if available)
-                    if !listing.description.isEmpty {
-                        Text(listing.description)
+                    if !listing.shortDescription.isEmpty {
+                        Text(listing.shortDescription)
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .lineLimit(3)

@@ -32,37 +32,41 @@ struct FeaturedListingCardView: View {
                     .clipShape(Rectangle())
                 
                 // Bottom content section
-                VStack(alignment: .leading, spacing: 8) {
-                    // Tags row
-                    HStack {
-                        if !listing.tags.isEmpty {
-                        ListingStyling.tagsView(tags: listing.tags)
-                            .padding(.top, 8)
-                    }
-                    
-                    // Cuisine if available
-                    if !listing.cuisine.isEmpty {
-                        Text(listing.cuisine)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    }
-                    
-                    
-                    // Listing name
+                VStack(alignment: .leading, spacing: 4) {
+                    // Listing name - matched to ListingCardView style
                     Text(listing.name)
-                        .font(.title3)
-                        .fontWeight(.bold)
+                        .font(.headline)
                         .padding(.top, 4)
                     
-                    // Description section
-                    if !listing.description.isEmpty {
-                        Text(listing.description)
-                            .font(.callout)
+                    // Tags and cuisine row in a single HStack
+                    HStack {
+                        // Only show tags if available
+                        if !listing.typeFilters.isEmpty {
+                            ListingStyling.tagsView(tags: listing.typeFilters)
+                        }
+                        
+                        // Only show cuisine if it's not empty
+                        if !listing.cuisine.isEmpty {
+                            Text(listing.cuisine)
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                                .padding(.leading, 4)
+                        }
+                        
+                        Spacer()
+                    }
+                    .padding(.top, 8)
+                    
+                    // Description section - matched to ListingCardView style
+                    if !listing.shortDescription.isEmpty {
+                        Text(listing.shortDescription)
+                            .font(.caption)
                             .foregroundColor(.secondary)
-                            .lineLimit(4)
+                            .lineLimit(3)
                             .multilineTextAlignment(.leading)
-                            .padding(.top, 2)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(width: UIScreen.main.bounds.width * 0.45, alignment: .leading)
+                            .padding(.top, 8)
                     }
                     
                     Spacer()
@@ -70,11 +74,10 @@ struct FeaturedListingCardView: View {
                     // Footer with location
                     HStack(spacing: 4) {
                         Image(systemName: "location.circle.fill")
-                            .font(.caption)
+                            .font(.caption2)
                         
                         Text(listing.location.uppercased())
-                            .font(.caption)
-                            .fontWeight(.medium)
+                            .font(.caption2)
                         
                         Spacer()
                     }
@@ -94,4 +97,4 @@ struct FeaturedListingCardView: View {
             .presentationDragIndicator(.visible)
         }
     }
-} 
+}

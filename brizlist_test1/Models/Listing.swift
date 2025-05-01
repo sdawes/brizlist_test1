@@ -11,11 +11,11 @@ import FirebaseFirestore
 struct Listing: Identifiable, Codable {
     @DocumentID var id: String? // Optional because Firebase generates this automatically
     var name: String
-    var tags: [String]
-    var cuisine: String // Changed from subCategory to cuisine
-    var description: String
+    var typeFilters: [String]  // Renamed from tags
+    var cuisine: String 
+    var shortDescription: String  // Renamed from description
     var location: String
-    var imageUrl: String? // Changed from imageURL to imageUrl to match Firestore field name
+    var imageUrl: String?
     var isBrizPick: Bool?
     var isFeatured: Bool?
     
@@ -26,12 +26,12 @@ struct Listing: Identifiable, Codable {
     }
     
     // Updated initializer with consistent required/optional parameters
-    init(id: String? = nil, name: String, tags: [String] = [], cuisine: String = "", description: String, location: String, imageUrl: String? = nil, isBrizPick: Bool? = nil, isFeatured: Bool? = nil) {
+    init(id: String? = nil, name: String, typeFilters: [String] = [], cuisine: String = "", shortDescription: String, location: String, imageUrl: String? = nil, isBrizPick: Bool? = nil, isFeatured: Bool? = nil) {
         self.id = id
         self.name = name
-        self.tags = tags
+        self.typeFilters = typeFilters
         self.cuisine = cuisine
-        self.description = description
+        self.shortDescription = shortDescription
         self.location = location
         self.imageUrl = imageUrl
         self.isBrizPick = isBrizPick
