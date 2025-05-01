@@ -24,24 +24,44 @@ struct FeaturedListingCardView: View {
             showingDetailView = true
         }) {
             // Card structure
-            ZStack(alignment: .top) {
-                // Main content area excluding category (starts below the category)
-                VStack(alignment: .leading, spacing: 4) {
+            VStack(spacing: 0) {
+                // Top image section - covers full width, ~half height
+                FirebaseStorageImage(urlString: listing.imageUrl)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: featuredHeight / 2)
+                    .clipShape(Rectangle())
+                
+                // Bottom content section
+                VStack(alignment: .leading, spacing: 8) {
+                    // Tags row
+                    HStack {
+                        if !listing.tags.isEmpty {
+                        ListingStyling.tagsView(tags: listing.tags)
+                            .padding(.top, 8)
+                    }
+                    
+                    // Cuisine if available
+                    if !listing.cuisine.isEmpty {
+                        Text(listing.cuisine)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    }
+                    
+                    
                     // Listing name
                     Text(listing.name)
                         .font(.title3)
                         .fontWeight(.bold)
                         .padding(.top, 4)
                     
-                    // Description (if available)
+                    // Description section
                     if !listing.description.isEmpty {
                         Text(listing.description)
                             .font(.callout)
                             .foregroundColor(.secondary)
-                            .lineLimit(6)
+                            .lineLimit(4)
                             .multilineTextAlignment(.leading)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(width: UIScreen.main.bounds.width * 0.45, alignment: .leading)
                             .padding(.top, 2)
                     }
                     
@@ -60,38 +80,7 @@ struct FeaturedListingCardView: View {
                     }
                     .foregroundColor(.black)
                 }
-                .padding(.horizontal, 12)
-                .padding(.bottom, 12)
-                .padding(.top, 40)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                
-                // Tags and cuisine row
-                HStack {
-                    if !listing.tags.isEmpty {
-                        ListingStyling.tagsView(tags: listing.tags)
-                    }
-                    
-                    if !listing.cuisine.isEmpty {
-                        Text(listing.cuisine)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .padding(.leading, 4)
-                    }
-                    
-                    Spacer()
-                }
-                .padding(.horizontal, 12)
-                .padding(.top, 12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .zIndex(1)
-                
-                // Large featured image
-                FirebaseStorageImage(urlString: listing.imageUrl)
-                    .frame(width: 240, height: 240)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .padding(.trailing, 12)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-                    .zIndex(2)
+                .padding(12)
             }
             .frame(height: featuredHeight)
             .background(Color.white)

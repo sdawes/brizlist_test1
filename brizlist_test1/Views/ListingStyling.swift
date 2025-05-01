@@ -62,52 +62,18 @@ struct ListingStyling {
             .foregroundColor(.white)
     }
 
-    // MARK: - Amenity Symbols
-    
-    static func veganSymbol() -> some View {
-        Image(systemName: "carrot.fill")
-            .font(.system(size: 12))
-            .foregroundColor(.white)
-    }
-    
-    static func vegSymbol() -> some View {
-        Image(systemName: "leaf.fill")
-            .font(.system(size: 12))
-            .foregroundColor(.white)
-    }
-    
-    static func dogSymbol() -> some View {
-        Image(systemName: "pawprint.fill")
-            .font(.system(size: 12))
-            .foregroundColor(.white)
-    }
-    
-    static func childSymbol() -> some View {
-        Image(systemName: "figure.2.and.child.holdinghands")
-            .font(.system(size: 12))
-            .foregroundColor(.white)
-    }
-
-    // MARK: - Sunday Lunch Symbol
-    
-    static func sundayLunchSymbol() -> some View {
-        Image(systemName: "oven.fill")
-            .font(.system(size: 12))
-            .foregroundColor(.white)
-    }
-
     // MARK: - Tag Pills
 
     static func tagPill(_ tag: String) -> some View {
         return Text(tag.uppercased())
-            .font(.caption2)
+            .font(.system(size: 10))
             .fontWeight(.medium)
             .foregroundColor(.black)
-            .padding(.vertical, 3)
-            .padding(.horizontal, 8)
+            .padding(.vertical, 2.5)
+            .padding(.horizontal, 7)
             .background(
                 Capsule()
-                    .fill(Color(red: 0.93, green: 0.87, blue: 0.76)) // Light oak cream color
+                    .fill(Color(red: 0.93, green: 0.87, blue: 0.76))
             )
     }
 

@@ -37,8 +37,6 @@ class ListingsViewModel: ObservableObject {
     // List of available filters (for UI and reference)
     let availableFilters: [FilterOption] = [
         FilterOption(field: "isBrizPick", displayName: "Briz Picks"),
-        FilterOption(field: "isSundayLunch", displayName: "Sunday Lunch"),
-        FilterOption(field: "isDog", displayName: "Dog Friendly"),
         FilterOption(field: "isFeatured", displayName: "Featured"),
         // Add more filters as needed
     ]
@@ -233,10 +231,6 @@ class ListingsViewModel: ObservableObject {
             location: data["location"] as? String ?? "",
             imageUrl: data["imageUrl"] as? String,
             isBrizPick: data["isBrizPick"] as? Bool,
-            isVeg: data["isVeg"] as? Bool,
-            isDog: data["isDog"] as? Bool,
-            isChild: data["isChild"] as? Bool,
-            isSundayLunch: data["isSundayLunch"] as? Bool,
             isFeatured: data["isFeatured"] as? Bool
         )
     }

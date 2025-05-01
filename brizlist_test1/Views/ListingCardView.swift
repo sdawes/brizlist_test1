@@ -25,12 +25,31 @@ struct ListingCardView: View {
         }) {
             // Card structure without symbol margin
             ZStack(alignment: .top) {
-                // Main content area excluding category (starts below the category)
+                // Main content area
                 VStack(alignment: .leading, spacing: 4) {
-                    // Listing name
+                    // Listing name first (moved to top)
                     Text(listing.name)
                         .font(.headline)
                         .padding(.top, 4)
+                    
+                    // Tags and cuisine row - now placed below the name
+                    HStack {
+                        // Only show tags if available
+                        if !listing.tags.isEmpty {
+                            ListingStyling.tagsView(tags: listing.tags)
+                        }
+                        
+                        // Only show cuisine if it's not empty
+                        if !listing.cuisine.isEmpty {
+                            Text(listing.cuisine)
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                                .padding(.leading, 4)
+                        }
+                        
+                        Spacer()
+                    }
+                    .padding(.top, 8)
                     
                     // Description (if available)
                     if !listing.description.isEmpty {
@@ -41,7 +60,7 @@ struct ListingCardView: View {
                             .multilineTextAlignment(.leading)
                             .fixedSize(horizontal: false, vertical: true)
                             .frame(width: UIScreen.main.bounds.width * 0.45, alignment: .leading)
-                            .padding(.top, 2)
+                            .padding(.top, 8)
                     }
                     
                     Spacer()
@@ -59,31 +78,8 @@ struct ListingCardView: View {
                     .foregroundColor(.black)
                 }
                 .padding(.horizontal, 12)
-                .padding(.bottom, 12)
-                .padding(.top, 40)
+                .padding(.vertical, 12)  // Changed from top/bottom padding to vertical
                 .frame(maxWidth: .infinity, alignment: .leading)
-                
-                // Tags and cuisine row - positioned at the very top
-                HStack {
-                    // Only show tags if available
-                    if !listing.tags.isEmpty {
-                        ListingStyling.tagsView(tags: listing.tags)
-                    }
-                    
-                    // Only show cuisine if it's not empty
-                    if !listing.cuisine.isEmpty {
-                        Text(listing.cuisine)
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                            .padding(.leading, 4)
-                    }
-                    
-                    Spacer()
-                }
-                .padding(.horizontal, 12)
-                .padding(.top, 12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .zIndex(1)
                 
                 // Floating image box - vertically centered
                 FirebaseStorageImage(urlString: listing.imageUrl)

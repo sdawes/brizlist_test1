@@ -17,10 +17,6 @@ struct Listing: Identifiable, Codable {
     var location: String
     var imageUrl: String? // Changed from imageURL to imageUrl to match Firestore field name
     var isBrizPick: Bool?
-    var isVeg: Bool?
-    var isDog: Bool?
-    var isChild: Bool?
-    var isSundayLunch: Bool?
     var isFeatured: Bool?
     
     // Helper to get a displayable URL
@@ -30,7 +26,7 @@ struct Listing: Identifiable, Codable {
     }
     
     // Updated initializer with consistent required/optional parameters
-    init(id: String? = nil, name: String, tags: [String] = [], cuisine: String = "", description: String, location: String, imageUrl: String? = nil, isBrizPick: Bool? = nil, isVeg: Bool? = nil, isDog: Bool? = nil, isChild: Bool? = nil, isSundayLunch: Bool? = nil, isFeatured: Bool? = nil) {
+    init(id: String? = nil, name: String, tags: [String] = [], cuisine: String = "", description: String, location: String, imageUrl: String? = nil, isBrizPick: Bool? = nil, isFeatured: Bool? = nil) {
         self.id = id
         self.name = name
         self.tags = tags
@@ -39,10 +35,6 @@ struct Listing: Identifiable, Codable {
         self.location = location
         self.imageUrl = imageUrl
         self.isBrizPick = isBrizPick
-        self.isVeg = isVeg
-        self.isDog = isDog
-        self.isChild = isChild
-        self.isSundayLunch = isSundayLunch
         self.isFeatured = isFeatured
     }
 }
