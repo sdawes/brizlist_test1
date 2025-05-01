@@ -70,61 +70,24 @@ struct ListingsScrollView: View {
             }
             
             LazyVStack(spacing: 16) {
-                // Featured listings section
-                if !viewModel.featuredListings.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        // Featured section header with enhanced styling
-                        HStack {
-                            Image(systemName: "medal.fill")
-                                .foregroundColor(.orange)
-                                .font(.subheadline)
-                            
-                            Text("FEATURED")
-                                .font(.subheadline)
-                                .fontWeight(.bold)
-                                .foregroundColor(.black)
-                            
-                            Spacer()
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 12)
-                        .padding(.bottom, 8)
-                        
-                        // Featured listings
-                        ForEach(viewModel.featuredListings) { listing in
-                            ListingCardView(
-                                listing: listing
-                            )
+                // All listings in a single flow
+                ForEach(viewModel.listings) { listing in
+                    if listing.isFeatured ?? false {
+                        FeaturedListingCardView(listing: listing)
                             .padding(.horizontal)
                             .onAppear {
-                                if listing.id == viewModel.featuredListings.last?.id {
+                                if listing.id == viewModel.listings.last?.id {
                                     viewModel.loadMoreListings()
                                 }
                             }
-                        }
-                    }
-                    .padding(.bottom, 16)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.blue.opacity(0.08)) // Very light blue background
-                            .padding(.horizontal, 8)
-                    )
-                    
-                    // Add a bit more space after the featured section
-                    Spacer()
-                        .frame(height: 12)
-                }
-                
-                // Regular listings
-                ForEach(viewModel.listings) { listing in
-                    ListingCardView(
-                        listing: listing
-                    )
-                    .padding(.horizontal)
-                    .onAppear {
-                        if listing.id == viewModel.listings.last?.id {
-                            viewModel.loadMoreListings()
-                        }
+                    } else {
+                        ListingCardView(listing: listing)
+                            .padding(.horizontal)
+                            .onAppear {
+                                if listing.id == viewModel.listings.last?.id {
+                                    viewModel.loadMoreListings()
+                                }
+                            }
                     }
                 }
                 

@@ -209,14 +209,15 @@ class ListingsViewModel: ObservableObject {
         
         let newListings = filteredDocuments.compactMap(createListingFromDocument)
         
+        // We still use separateFeaturedListings for reference, but we'll include all listings in the main array
         let (featured, regular) = separateFeaturedListings(newListings)
         
         if isInitialFetch {
             featuredListings = featured
-            listings = regular
+            listings = newListings  // Use all listings, not just regular
         } else {
             featuredListings.append(contentsOf: featured)
-            listings.append(contentsOf: regular)
+            listings.append(contentsOf: newListings)  // Use all listings, not just regular
         }
     }
     
@@ -252,7 +253,7 @@ class ListingsViewModel: ObservableObject {
         var regular: [Listing] = []
         
         for listing in listings {
-            if listing.isFeatured == true {
+            if listing.isFeatured ?? false {
                 featured.append(listing)
             } else {
                 regular.append(listing)

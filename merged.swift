@@ -699,9 +699,9 @@ struct ListingStyling {
 
     // MARK: - Featured Symbol
     static func featuredSymbol() -> some View {
-        Image(systemName: "medal.fill")
-            .font(.system(size: 12))
-            .foregroundColor(.white)
+        Image(systemName: "star.fill")
+            .font(.system(size: 14))
+            .foregroundColor(.blue)
     }
 
     // MARK: - Tag Pills
@@ -761,9 +761,6 @@ struct ListingDetailView: View {
                             .clipped()
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                             .shadow(radius: 2)
-                            .onAppear {
-                                print("📷 Detail view loading image: \(imageUrl)")
-                            }
                     }
                     
                     Text(listing.name)
@@ -910,17 +907,106 @@ struct EditListingView: View {
 import SwiftUI
 import FirebaseStorage
 
-// Shared cache for images
+// Enhanced cache with disk persistence
 private class ImageCache {
     static let shared = ImageCache()
-    private var cache = NSCache<NSString, UIImage>()
+    private var memoryCache = NSCache<NSString, UIImage>()
+    private let fileManager = FileManager.default
+    private let diskCacheDirectory: URL
     
-    func getImage(for key: String) -> UIImage? {
-        return cache.object(forKey: key as NSString)
+    init() {
+        // Create a persistent cache directory in the app's cache folder
+        let cacheDirectories = fileManager.urls(for: .cachesDirectory, in: .userDomainMask)
+        diskCacheDirectory = cacheDirectories[0].appendingPathComponent("BrizlistImageCache", isDirectory: true)
+        
+        // Create the directory if it doesn't exist
+        if !fileManager.fileExists(atPath: diskCacheDirectory.path) {
+            do {
+                try fileManager.createDirectory(at: diskCacheDirectory, 
+                                               withIntermediateDirectories: true,
+                                               attributes: nil)
+            } catch {
+                print("❌ Error creating disk cache directory: \(error)")
+            }
+        }
     }
     
+    // Check if image exists in memory cache
+    func getFromMemory(for key: String) -> UIImage? {
+        return memoryCache.object(forKey: key as NSString)
+    }
+    
+    // Save image to memory cache
+    func saveToMemory(_ image: UIImage, for key: String) {
+        memoryCache.setObject(image, forKey: key as NSString)
+    }
+    
+    // Get file URL for a key
+    private func fileURL(for key: String) -> URL {
+        // Use a hash of the key for the filename to ensure valid filenames
+        let filename = "\(key.hash).jpg"
+        return diskCacheDirectory.appendingPathComponent(filename)
+    }
+    
+    // Save image to disk
+    func saveToDisk(_ image: UIImage, for key: String) {
+        let url = fileURL(for: key)
+        
+        // Convert image to JPEG data
+        if let data = image.jpegData(compressionQuality: 0.8) {
+            do {
+                try data.write(to: url)
+            } catch {
+                print("❌ Failed to write image to disk: \(error)")
+            }
+        }
+    }
+    
+    // Get image from disk
+    func getFromDisk(for key: String) -> UIImage? {
+        let url = fileURL(for: key)
+        
+        guard fileManager.fileExists(atPath: url.path) else {
+            return nil
+        }
+        
+        do {
+            let data = try Data(contentsOf: url)
+            if let image = UIImage(data: data) {
+                return image
+            }
+        } catch {
+            print("❌ Failed to read image from disk: \(error)")
+        }
+        
+        return nil
+    }
+    
+    // Get image from cache (memory or disk)
+    func getImage(for key: String) -> UIImage? {
+        // First check memory cache (fastest)
+        if let memoryImage = getFromMemory(for: key) {
+            return memoryImage
+        }
+        
+        // Then check disk cache
+        if let diskImage = getFromDisk(for: key) {
+            // Store in memory for faster access next time
+            saveToMemory(diskImage, for: key)
+            return diskImage
+        }
+        
+        return nil
+    }
+    
+    // Save image to both memory and disk caches
     func setImage(_ image: UIImage, for key: String) {
-        cache.setObject(image, forKey: key as NSString)
+        saveToMemory(image, for: key)
+        
+        // Save to disk on background thread
+        DispatchQueue.global(qos: .background).async { [weak self] in
+            self?.saveToDisk(image, for: key)
+        }
     }
 }
 
@@ -950,29 +1036,23 @@ struct FirebaseStorageImage: View {
     
     private func loadImage() {
         guard let urlString = urlString else {
-            print("⚠️ No URL provided for FirebaseStorageImage")
             isLoading = false
             return
         }
         
-        // Check if image is already cached
+        // Check if image is already cached (in memory or on disk)
         if let cachedImage = ImageCache.shared.getImage(for: urlString) {
-            print("📂 Using cached image for: \(urlString)")
             image = cachedImage
             isLoading = false
             return
         }
         
-        print("🔄 Attempting to load: \(urlString)")
-        
         // First try direct URL loading if it's an https URL
         if urlString.hasPrefix("https://") {
             if let url = URL(string: urlString) {
-                print("🌐 Loading via URLSession: \(urlString)")
                 URLSession.shared.dataTask(with: url) { data, response, error in
                     DispatchQueue.main.async {
                         if let data = data, let downloadedImage = UIImage(data: data) {
-                            print("✅ Direct URL loading successful")
                             self.image = downloadedImage
                             self.isLoading = false
                             // Cache the successfully loaded image
@@ -980,7 +1060,6 @@ struct FirebaseStorageImage: View {
                             return
                         } else {
                             // Continue to Firebase loading method
-                            print("⚠️ Direct URL loading failed, trying Firebase...")
                             loadFromFirebase(urlString: urlString)
                         }
                     }
@@ -999,13 +1078,10 @@ struct FirebaseStorageImage: View {
         // Create appropriate reference
         let storageRef: StorageReference
         if urlString.hasPrefix("gs://") {
-            print("🔥 Using gs:// reference: \(urlString)")
             storageRef = storage.reference(forURL: urlString)
         } else if urlString.hasPrefix("https://firebasestorage.googleapis.com") {
-            print("🔥 Using https:// Firebase reference: \(urlString)")
             storageRef = storage.reference(forURL: urlString)
         } else {
-            print("🔥 Using path in default bucket: \(urlString)")
             storageRef = storage.reference().child(urlString)
         }
         
@@ -1024,10 +1100,9 @@ struct FirebaseStorageImage: View {
                     return
                 }
                 
-                print("✅ Successfully loaded image from Firebase")
                 self.image = downloadedImage
                 
-                // Cache the successfully loaded image
+                // Cache the successfully loaded image (both memory and disk)
                 ImageCache.shared.setImage(downloadedImage, for: urlString)
             }
         }
@@ -1048,10 +1123,6 @@ struct ListingCardView: View {
     var body: some View {
         Button(action: {
             showingDetailView = true
-            // Print image URL for debugging
-            if let imageUrl = listing.imageUrl {
-                print("📱 Listing Card for \(listing.name) has imageUrl: \(imageUrl)")
-            }
         }) {
             // Card structure without symbol margin
             ZStack(alignment: .top) {
@@ -1122,13 +1193,6 @@ struct ListingCardView: View {
                     .padding(.trailing, 12)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
                     .zIndex(2)
-                    .onAppear {
-                        if let imageUrl = listing.imageUrl {
-                            print("👁️ Card image URL for \(listing.name): \(imageUrl)")
-                        } else {
-                            print("⚠️ No image URL for \(listing.name)")
-                        }
-                    }
             }
             .frame(height: 160)
             .background(Color.white)
@@ -1291,59 +1355,31 @@ struct ListingsScrollView: View {
             }
             
             LazyVStack(spacing: 16) {
-                // Featured listings section
-                if !viewModel.featuredListings.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        // Featured section header with enhanced styling
-                        HStack {
-                            Image(systemName: "medal.fill")
-                                .foregroundColor(.orange)
-                                .font(.subheadline)
-                            
-                            Text("FEATURED")
-                                .font(.subheadline)
-                                .fontWeight(.bold)
-                                .foregroundColor(.black)
-                            
-                            Spacer()
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 12)
-                        .padding(.bottom, 8)
+                // All listings in a single flow
+                ForEach(viewModel.featuredListings + viewModel.listings) { listing in
+                    ZStack(alignment: .topTrailing) {
+                        ListingCardView(
+                            listing: listing
+                        )
                         
-                        // Featured listings
-                        ForEach(viewModel.featuredListings) { listing in
-                            ListingCardView(
-                                listing: listing
-                            )
-                            .padding(.horizontal)
-                            .onAppear {
-                                if listing.id == viewModel.featuredListings.last?.id {
-                                    viewModel.loadMoreListings()
-                                }
-                            }
+                        // Add a featured star indicator if listing is featured
+                        if listing.isFeatured == true {
+                            ListingStyling.featuredSymbol()
+                                .padding(8)
+                                .background(
+                                    Circle()
+                                        .fill(Color.white)
+                                        .shadow(radius: 2)
+                                )
+                                .offset(x: -5, y: 5)
+                                .zIndex(3)
                         }
                     }
-                    .padding(.bottom, 16)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.blue.opacity(0.08)) // Very light blue background
-                            .padding(.horizontal, 8)
-                    )
-                    
-                    // Add a bit more space after the featured section
-                    Spacer()
-                        .frame(height: 12)
-                }
-                
-                // Regular listings
-                ForEach(viewModel.listings) { listing in
-                    ListingCardView(
-                        listing: listing
-                    )
                     .padding(.horizontal)
                     .onAppear {
-                        if listing.id == viewModel.listings.last?.id {
+                        // Check if we're at the last item of all listings to trigger loading more
+                        let allListings = viewModel.featuredListings + viewModel.listings
+                        if listing.id == allListings.last?.id {
                             viewModel.loadMoreListings()
                         }
                     }

@@ -96,16 +96,6 @@ struct ListingStyling {
             .foregroundColor(.white)
     }
 
-    
-
-
-    // MARK: - Featured Symbol
-    static func featuredSymbol() -> some View {
-        Image(systemName: "medal.fill")
-            .font(.system(size: 12))
-            .foregroundColor(.white)
-    }
-
     // MARK: - Tag Pills
 
     static func tagPill(_ tag: String) -> some View {

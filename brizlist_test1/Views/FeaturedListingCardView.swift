@@ -1,5 +1,5 @@
 //
-//  ListingCardView.swift
+//  FeaturedListingCardView.swift
 //  brizlist_test1
 //
 //  Created by Stephen Dawes on 13/03/2025.
@@ -7,14 +7,14 @@
 
 import SwiftUI
 
-struct ListingCardView: View {
+struct FeaturedListingCardView: View {
     let listing: Listing
     @State private var showingDetailView = false
     
-    // Standard card height
-    private let standardHeight: CGFloat = 160
+    // Featured card height
+    private let featuredHeight: CGFloat = 320
     
-    // Helper for checking featured status
+    // Verify that this listing is actually featured (defensive check)
     var isFeatured: Bool {
         return listing.isFeatured ?? false
     }
@@ -23,21 +23,22 @@ struct ListingCardView: View {
         Button(action: {
             showingDetailView = true
         }) {
-            // Card structure without symbol margin
+            // Card structure
             ZStack(alignment: .top) {
                 // Main content area excluding category (starts below the category)
                 VStack(alignment: .leading, spacing: 4) {
                     // Listing name
                     Text(listing.name)
-                        .font(.headline)
+                        .font(.title3)
+                        .fontWeight(.bold)
                         .padding(.top, 4)
                     
                     // Description (if available)
                     if !listing.description.isEmpty {
                         Text(listing.description)
-                            .font(.caption)
+                            .font(.callout)
                             .foregroundColor(.secondary)
-                            .lineLimit(3)
+                            .lineLimit(6)
                             .multilineTextAlignment(.leading)
                             .fixedSize(horizontal: false, vertical: true)
                             .frame(width: UIScreen.main.bounds.width * 0.45, alignment: .leading)
@@ -46,13 +47,14 @@ struct ListingCardView: View {
                     
                     Spacer()
                     
-                    // Footer with just location
+                    // Footer with location
                     HStack(spacing: 4) {
                         Image(systemName: "location.circle.fill")
-                            .font(.caption2)
+                            .font(.caption)
                         
                         Text(listing.location.uppercased())
-                            .font(.caption2)
+                            .font(.caption)
+                            .fontWeight(.medium)
                         
                         Spacer()
                     }
@@ -63,17 +65,15 @@ struct ListingCardView: View {
                 .padding(.top, 40)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 
-                // Tags and cuisine row - positioned at the very top
+                // Tags and cuisine row
                 HStack {
-                    // Only show tags if available
                     if !listing.tags.isEmpty {
                         ListingStyling.tagsView(tags: listing.tags)
                     }
                     
-                    // Only show cuisine if it's not empty
                     if !listing.cuisine.isEmpty {
                         Text(listing.cuisine)
-                            .font(.caption2)
+                            .font(.caption)
                             .foregroundColor(.secondary)
                             .padding(.leading, 4)
                     }
@@ -85,15 +85,15 @@ struct ListingCardView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .zIndex(1)
                 
-                // Floating image box - vertically centered
+                // Large featured image
                 FirebaseStorageImage(urlString: listing.imageUrl)
-                    .frame(width: 120, height: 120)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .frame(width: 240, height: 240)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                     .padding(.trailing, 12)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
                     .zIndex(2)
             }
-            .frame(height: standardHeight)
+            .frame(height: featuredHeight)
             .background(Color.white)
             .cornerRadius(12)
         }
@@ -105,4 +105,4 @@ struct ListingCardView: View {
             .presentationDragIndicator(.visible)
         }
     }
-}
+} 
