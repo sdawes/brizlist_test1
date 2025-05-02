@@ -18,8 +18,12 @@ class ListingsViewModel: ObservableObject {
     @Published private(set) var hasMoreListings = true
     @Published var errorMessage: String?
     @Published var showError: Bool = false
-    @Published var selectedTags: Set<String> = []
+    @Published var selectedTypeFilters: Set<String> = []
     @Published var noResultsFromFiltering: Bool = false
+    
+    // Cache all available filters (populated after first fetch)
+    private var cachedTypeFilters: [String] = []
+    private var cachedTags: [String] = []
     
     private let db = Firestore.firestore()
     private let pageSize = 20
@@ -79,9 +83,9 @@ class ListingsViewModel: ObservableObject {
         activeFilterValues.values.contains(true)
     }
     
-    // Add this helper property to check if tag filtering is active
-    var hasTagFilters: Bool {
-        return !selectedTags.isEmpty
+    // Helper to check if type filter filtering is active
+    var hasTypeFilters: Bool {
+        return !selectedTypeFilters.isEmpty
     }
     
     // MARK: - Private Helpers
@@ -96,19 +100,19 @@ class ListingsViewModel: ObservableObject {
         let collectionRef = db.collection("listings")
         var query: Query = collectionRef.order(by: "name")
         
-        // Filter by tags if any are selected
-        if !selectedTags.isEmpty {
-            // For "AND" tag filtering, we need to check that each document contains all selected tags
+        // Filter by type filters if any are selected
+        if !selectedTypeFilters.isEmpty {
+            // For "AND" type filtering, we need to check that each document contains all selected type filters
             // We'll use multiple array-contains queries in combination with filter client-side
             
-            // Start with the first tag (we need at least one in the Firestore query)
-            let tagsArray = Array(selectedTags)
-            query = query.whereField("typeFilters", arrayContains: tagsArray[0])
+            // Start with the first type filter (we need at least one in the Firestore query)
+            let typeFiltersArray = Array(selectedTypeFilters)
+            query = query.whereField("typeFilters", arrayContains: typeFiltersArray[0])
             
-            // We'll need to filter the rest of the tags client-side in processQueryResults
+            // We'll need to filter the rest of the type filters client-side in processQueryResults
         }
         
-        // Apply all other active filters (your existing code)
+        // Apply all other active filters
         for (field, isActive) in activeFilterValues {
             if isActive {
                 query = query.whereField(field, isEqualTo: true)
@@ -149,7 +153,7 @@ class ListingsViewModel: ObservableObject {
         }
         
         // Check if we have any filters active 
-        let hasActiveFilters = self.hasActiveFilters || self.hasTagFilters
+        let hasActiveFilters = self.hasActiveFilters || self.hasTypeFilters
         
         guard let documents = snapshot?.documents else {
             hasMoreListings = false
@@ -163,23 +167,23 @@ class ListingsViewModel: ObservableObject {
             return
         }
         
-        // Additional client-side filtering if we have multiple tags
+        // Additional client-side filtering if we have multiple type filters
         // (Firestore can only query for one array-contains at a time)
         var filteredDocuments = documents
-        if selectedTags.count > 1 {
-            let allTags = Array(selectedTags)
-            // Skip the first tag as it was already filtered in the query
-            let additionalTags = allTags.dropFirst()
+        if selectedTypeFilters.count > 1 {
+            let allTypeFilters = Array(selectedTypeFilters)
+            // Skip the first type filter as it was already filtered in the query
+            let additionalTypeFilters = allTypeFilters.dropFirst()
             
-            // Filter documents to contain ALL the selected tags (AND operation)
+            // Filter documents to contain ALL the selected type filters (AND operation)
             filteredDocuments = documents.filter { document in
-                guard let documentTags = document.data()["typeFilters"] as? [String] else {
+                guard let documentTypeFilters = document.data()["typeFilters"] as? [String] else {
                     return false
                 }
                 
-                // Check that all additional tags are present in the document
-                for tag in additionalTags {
-                    if !documentTags.contains(tag) {
+                // Check that all additional type filters are present in the document
+                for typeFilter in additionalTypeFilters {
+                    if !documentTypeFilters.contains(typeFilter) {
                         return false
                     }
                 }
@@ -207,6 +211,11 @@ class ListingsViewModel: ObservableObject {
         hasMoreListings = documents.count >= pageSize
         
         let newListings = filteredDocuments.compactMap(createListingFromDocument)
+        
+        // Update cached filters if we're fetching without filters
+        if !hasActiveFilters && !hasTypeFilters {
+            cacheAllAvailableFilters(from: newListings)
+        }
         
         // We still use separateFeaturedListings for reference, but we'll include all listings in the main array
         let (featured, regular) = separateFeaturedListings(newListings)
@@ -260,51 +269,73 @@ class ListingsViewModel: ObservableObject {
         return (featured, regular)
     }
     
-    // Add these methods to manage tag selection
-    func selectTag(_ tag: String) {
-        selectedTags.insert(tag)
+    // Remove redundant tag selection methods, keeping only the type filter methods
+    func selectTypeFilter(_ filter: String) {
+        selectedTypeFilters.insert(filter)
         fetchListings() // Refresh listings with the new filter
     }
 
-    func deselectTag(_ tag: String) {
-        selectedTags.remove(tag)
+    func deselectTypeFilter(_ filter: String) {
+        selectedTypeFilters.remove(filter)
         fetchListings() // Refresh listings with the new filter
     }
 
-    func toggleTag(_ tag: String) {
-        if selectedTags.contains(tag) {
-            selectedTags.remove(tag)
+    func toggleTypeFilter(_ filter: String) {
+        if selectedTypeFilters.contains(filter) {
+            selectedTypeFilters.remove(filter)
         } else {
-            selectedTags.insert(tag)
+            selectedTypeFilters.insert(filter)
         }
         fetchListings() // Refresh listings with the new filter
     }
 
-    func clearTagFilters() {
-        selectedTags.removeAll()
+    func clearTypeFilters() {
+        selectedTypeFilters.removeAll()
         fetchListings() // Refresh listings with the new filter
     }
 
-    // You can also add this method to get all unique tags from current listings
-    func getAllUniqueTags() -> [String] {
-        var allTags = Set<String>()
+    // Get all unique type filters from current listings
+    func getAllUniqueTypeFilters() -> [String] {
+        var allTypeFilters = Set<String>()
         
-        // Collect tags from all listings
+        // Collect type filters from all listings
         for listing in listings {
-            allTags.formUnion(listing.typeFilters)
+            allTypeFilters.formUnion(listing.typeFilters)
         }
         
         for listing in featuredListings {
-            allTags.formUnion(listing.typeFilters)
+            allTypeFilters.formUnion(listing.typeFilters)
         }
         
-        return Array(allTags).sorted()
+        // Filter out tag values for the type section
+        return Array(allTypeFilters)
+            .filter { !$0.lowercased().contains("tag") }
+            .sorted()
+    }
+    
+    // Get all tag filters (type filters that contain "tag")
+    func getAllUniqueTags() -> [String] {
+        var allTypeFilters = Set<String>()
+        
+        // Collect type filters from all listings
+        for listing in listings {
+            allTypeFilters.formUnion(listing.typeFilters)
+        }
+        
+        for listing in featuredListings {
+            allTypeFilters.formUnion(listing.typeFilters)
+        }
+        
+        // Only return tag values
+        return Array(allTypeFilters)
+            .filter { $0.lowercased().contains("tag") }
+            .sorted()
     }
 
-    // Add a new method to check if a filter combination would yield results
-    func wouldFiltersYieldResults(tags: Set<String>, amenities: [String: Bool]) -> Bool {
+    // Check if a combination of filters would yield results
+    func wouldFiltersYieldResults(typeFilters: Set<String>, otherFilters: [String: Bool]) -> Bool {
         // If no filters selected, we'll have results
-        if tags.isEmpty && !amenities.values.contains(true) {
+        if typeFilters.isEmpty && !otherFilters.values.contains(true) {
             return true
         }
         
@@ -312,18 +343,18 @@ class ListingsViewModel: ObservableObject {
         let collectionRef = db.collection("listings")
         var query: Query = collectionRef
         
-        // Apply amenity filters (AND operation - must match all)
-        for (field, isActive) in amenities {
+        // Apply other filters (AND operation - must match all)
+        for (field, isActive) in otherFilters {
             if isActive {
                 query = query.whereField(field, isEqualTo: true)
             }
         }
         
-        // For tags, we need to handle the AND operation differently
-        // We'll do the first tag in Firestore and the rest client-side
-        if !tags.isEmpty {
-            let tagsArray = Array(tags)
-            query = query.whereField("typeFilters", arrayContains: tagsArray[0])
+        // For type filters, we need to handle the AND operation differently
+        // We'll do the first type filter in Firestore and the rest client-side
+        if !typeFilters.isEmpty {
+            let typeFiltersArray = Array(typeFilters)
+            query = query.whereField("typeFilters", arrayContains: typeFiltersArray[0])
         }
         
         // Use a semaphore to make this synchronous
@@ -332,20 +363,20 @@ class ListingsViewModel: ObservableObject {
         
         query.limit(to: 20).getDocuments { snapshot, error in
             if let documents = snapshot?.documents {
-                // If we have multiple tags, filter client-side to ensure all tags match
-                if tags.count > 1 {
-                    let allTags = Array(tags)
-                    let additionalTags = allTags.dropFirst() // Skip first tag (already filtered)
+                // If we have multiple type filters, filter client-side to ensure all type filters match
+                if typeFilters.count > 1 {
+                    let allTypeFilters = Array(typeFilters)
+                    let additionalTypeFilters = allTypeFilters.dropFirst() // Skip first filter (already filtered)
                     
-                    // Check for documents with ALL the selected tags
+                    // Check for documents with ALL the selected type filters
                     let matchingDocs = documents.filter { document in
-                        guard let documentTags = document.data()["typeFilters"] as? [String] else {
+                        guard let documentTypeFilters = document.data()["typeFilters"] as? [String] else {
                             return false
                         }
                         
-                        // Document must contain ALL additional tags
-                        for tag in additionalTags {
-                            if !documentTags.contains(tag) {
+                        // Document must contain ALL additional type filters
+                        for typeFilter in additionalTypeFilters {
+                            if !documentTypeFilters.contains(typeFilter) {
                                 return false
                             }
                         }
@@ -354,7 +385,7 @@ class ListingsViewModel: ObservableObject {
                     
                     hasResults = !matchingDocs.isEmpty
                 } else {
-                    // If just one tag or no tags, the Firestore query is sufficient
+                    // If just one type filter or no type filters, the Firestore query is sufficient
                     hasResults = !documents.isEmpty
                 }
             }
@@ -364,5 +395,35 @@ class ListingsViewModel: ObservableObject {
         // Wait for the result
         _ = semaphore.wait(timeout: .now() + 2.0)
         return hasResults
+    }
+    
+    // Cache all available filters from unfiltered listings
+    private func cacheAllAvailableFilters(from listings: [Listing]) {
+        var typeFilters = Set<String>()
+        var tags = Set<String>()
+        
+        for listing in listings {
+            for filter in listing.typeFilters {
+                if filter.lowercased().contains("tag") {
+                    tags.insert(filter)
+                } else {
+                    typeFilters.insert(filter)
+                }
+            }
+        }
+        
+        // Update cache
+        self.cachedTypeFilters = Array(typeFilters)
+        self.cachedTags = Array(tags)
+    }
+    
+    // Get cached type filters (for Filter sheet)
+    func getCachedTypeFilters() -> [String] {
+        return cachedTypeFilters
+    }
+    
+    // Get cached tags (for Filter sheet)
+    func getCachedTags() -> [String] {
+        return cachedTags
     }
 }
