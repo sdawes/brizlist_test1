@@ -23,69 +23,86 @@ struct ListingCardView: View {
         Button(action: {
             showingDetailView = true
         }) {
-            VStack(spacing: 0) {
-                ZStack(alignment: .topLeading) {
-                    // Main card content
-                    VStack(alignment: .leading, spacing: 8) {
-                        // Image at the top
-                        if let imageURL = listing.imageUrl {
-                            FirebaseStorageImage(path: imageURL)
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 160, height: 160)
-                                .clipped()
-                        } else {
-                            Rectangle()
-                                .fill(Color.gray.opacity(0.3))
-                                .frame(width: 160, height: 160)
-                                .overlay(
-                                    Image(systemName: "photo")
-                                        .foregroundColor(.gray)
-                                        .font(.largeTitle)
-                                )
+            // Card structure without symbol margin
+            ZStack(alignment: .top) {
+                // Main content area
+                VStack(alignment: .leading, spacing: 4) {
+                    // Listing name first (moved to top)
+                    Text(listing.name)
+                        .font(.headline)
+                        .padding(.top, 4)
+                    
+                    // Tags and cuisine row - now placed below the name
+                    HStack {
+                        // Only show tags if available
+                        if !listing.typeFilters.isEmpty {
+                            ListingStyling.typeFiltersView(typeFilters: listing.typeFilters)
                         }
                         
-                        // Listing details below the image
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(listing.name)
-                                .font(.headline)
-                                .lineLimit(1)
-                            
-                            Text(listing.shortDescription)
-                                .font(.subheadline)
+                        // Only show cuisine if it's not empty
+                        if !listing.cuisine.isEmpty {
+                            Text(listing.cuisine)
+                                .font(.caption2)
                                 .foregroundColor(.secondary)
-                                .lineLimit(3)
-                            
-                            // Location and tags
-                            HStack {
-                                if !listing.location.isEmpty {
-                                    Text(listing.location)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-                                
-                                Spacer()
-                            }
+                                .padding(.leading, 4)
                         }
-                        .padding(12)
+                        
+                        Spacer()
+                    }
+                    .padding(.top, 8)
+                    
+                    // Description (if available)
+                    if !listing.shortDescription.isEmpty {
+                        Text(listing.shortDescription)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(3)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(width: UIScreen.main.bounds.width * 0.45, alignment: .leading)
+                            .padding(.top, 8)
                     }
                     
-                    // NEW badge if the listing is new
-                    if listing.isNew == true {
-                        Text("NEW")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.green)
-                            .cornerRadius(4)
-                            .padding(8)
+                    Spacer()
+                    
+                    // Footer with just location
+                    HStack(spacing: 4) {
+                        Image(systemName: "location.circle.fill")
+                            .font(.caption2)
+                        
+                        Text(listing.location.uppercased())
+                            .font(.caption2)
+                        
+                        Spacer()
+                        
+                        // NEW badge if the listing is new
+                        if listing.isNew == true {
+                            Text("NEW")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.green)
+                                .cornerRadius(4)
+                        }
                     }
+                    .foregroundColor(.black)
                 }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 12)  // Changed from top/bottom padding to vertical
+                .frame(maxWidth: .infinity, alignment: .leading)
+                
+                // Floating image box - vertically centered
+                FirebaseStorageImage(urlString: listing.imageUrl)
+                    .frame(width: 120, height: 120)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .padding(.trailing, 12)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                    .zIndex(2)
             }
             .frame(height: standardHeight)
-            .background(Color(.systemBackground))
+            .background(Color.white)
             .cornerRadius(12)
-            .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
         }
         .buttonStyle(PlainButtonStyle())
         .sheet(isPresented: $showingDetailView) {

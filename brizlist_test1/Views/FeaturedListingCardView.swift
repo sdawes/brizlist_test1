@@ -80,6 +80,17 @@ struct FeaturedListingCardView: View {
                             .font(.caption2)
                         
                         Spacer()
+                        
+                        // NEW badge if the listing is new
+                        if listing.isNew == true {
+                            Text("NEW")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.green)
+                                .cornerRadius(4)
+                        }
                     }
                     .foregroundColor(.black)
                 }
