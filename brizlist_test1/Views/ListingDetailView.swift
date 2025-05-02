@@ -26,19 +26,6 @@ struct ListingDetailView: View {
     let listing: Listing
     @Environment(\.dismiss) var dismiss
     
-    // Example dummy data for previews
-    static let previewListing = Listing(
-        id: "123",
-        name: "Pasta Loco",
-        typeFilters: ["restaurant", "italian"],
-        cuisine: "Italian",
-        shortDescription: "A cozy spot in the heart of Bristol",
-        location: "Bristol",
-        imageUrl: "https://example.com/image.jpg",
-        isBrizPick: true,
-        isFeatured: false
-    )
-    
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -75,21 +62,23 @@ struct ListingDetailView: View {
                     }
                     
                     // Description
-                    if !listing.shortDescription.isEmpty {
+                    if !listing.longDescription.isEmpty {
+                        Text(listing.longDescription)
+                            .font(.callout)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.bottom, 16)
+                    } else if !listing.shortDescription.isEmpty {
+                        // Fall back to shortDescription if longDescription is empty
                         Text(listing.shortDescription)
-                            .font(.body)
+                            .font(.callout)
                             .fixedSize(horizontal: false, vertical: true)
                             .padding(.bottom, 16)
                     } else {
-                        // Fallback description
-                        Text("A beloved local spot that's been serving Bristol for years. Known for their exceptional service and welcoming atmosphere, this place has become a cornerstone of the community.")
-                            .font(.caption)
-                        
-                        Text("Whether you're stopping by for a quick visit or settling in for a longer stay, you'll find yourself surrounded by the warm, authentic vibe that makes Bristol's food scene so special.")
-                            .font(.caption)
-                        
-                        Text("Make sure to check out their seasonal specials and don't forget to ask about their house recommendations!")
-                            .font(.caption)
+                        // Simple fallback message
+                        Text("Description not available at this time")
+                            .font(.callout)
+                            .foregroundColor(.secondary)
+                            .padding(.bottom, 16)
                     }
                     
                     // Location information
@@ -142,15 +131,4 @@ struct ListingDetailView: View {
             .navigationBarTitleDisplayMode(.inline)
         }
     }
-}
-
-#Preview {
-    ListingDetailView(listing: Listing(
-        id: "1",
-        name: "The Bristol Lounge",
-        typeFilters: ["restaurant", "italian"],
-        cuisine: "Italian",
-        shortDescription: "A cozy spot in the heart of Bristol",
-        location: "Clifton, Bristol"
-    ))
 }

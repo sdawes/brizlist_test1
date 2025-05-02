@@ -65,7 +65,7 @@ struct FeaturedListingCardView: View {
                             .lineLimit(3)
                             .multilineTextAlignment(.leading)
                             .fixedSize(horizontal: false, vertical: true)
-                            .frame(width: UIScreen.main.bounds.width * 0.45, alignment: .leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.top, 8)
                     }
                     
