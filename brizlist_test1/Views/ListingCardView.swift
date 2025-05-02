@@ -36,7 +36,7 @@ struct ListingCardView: View {
                     HStack {
                         // Only show tags if available
                         if !listing.typeFilters.isEmpty {
-                            ListingStyling.tagsView(tags: listing.typeFilters)
+                            ListingStyling.typeFiltersView(typeFilters: listing.typeFilters)
                         }
                         
                         // Only show cuisine if it's not empty

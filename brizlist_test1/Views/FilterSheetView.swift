@@ -28,8 +28,8 @@ struct FilterSheetView: View {
                     }
                 }
                 
-                // Tags Section
-                Section(header: Text("Tags")) {
+                // Type Filters Section
+                Section(header: Text("Type Filters")) {
                     let allTags = viewModel.getAllUniqueTags()
                     ForEach(allTags, id: \.self) { tag in
                         Toggle(tag.capitalized, isOn: Binding(
