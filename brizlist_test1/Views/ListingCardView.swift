@@ -32,29 +32,38 @@ struct ListingCardView: View {
             ZStack(alignment: .top) {
                 // Main content area
                 VStack(alignment: .leading, spacing: 4) {
-                    // Listing name first (moved to top)
-                    Text(listing.name)
-                        .font(.headline)
-                        .padding(.top, 4)
+                    // Name and cuisine in the same row
+                    HStack {
+                        // Listing name
+                        Text(listing.name)
+                            .font(.headline)
+                            .lineLimit(1)
+                        
+                        Spacer()
+                        
+                        // Cuisine on the right side but to the left of the image
+                        if !listing.cuisine.isEmpty {
+                            Text(listing.cuisine)
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                                .padding(.leading, 4)
+                        }
+                    }
+                    .padding(.top, 4)
+                    .padding(.trailing, 140) // Increased from 124 to add more space between cuisine and image
                     
-                    // Tags and cuisine row - now placed below the name
+                    // Tags row - now placed below the name
                     HStack {
                         // Only show tags if available
                         if !listing.typeFilters.isEmpty {
                             ListingStyling.typeFiltersView(typeFilters: listing.typeFilters)
                         }
                         
-                        // Only show cuisine if it's not empty
-                        if !listing.cuisine.isEmpty {
-                            Text(listing.cuisine)
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                                .padding(.leading, 4)
-                        }
-                        
                         Spacer()
                     }
                     .padding(.top, 8)
+                    .padding(.trailing, 140) // Keep consistent with the name/cuisine row
                     
                     // Description (if available)
                     if !listing.shortDescription.isEmpty {
@@ -91,8 +100,28 @@ struct ListingCardView: View {
                     .frame(width: 120, height: 120)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                     .padding(.trailing, 12)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                    .padding(.top, 14) // Increased from 12 to move down 2 pixels
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                     .zIndex(2)
+                
+                // Symbols positioned vertically centered between image bottom and card bottom
+                HStack(spacing: 6) {
+                    // Star for Briz Picks
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(.yellow)
+                        .opacity(listing.isBrizPick ?? false ? 1.0 : 0.0)
+                    
+                    // Heart symbol as a second example
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(.red)
+                        .opacity(0.8) // Just for demonstration
+                }
+                .padding(.trailing, 12)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                .padding(.bottom, 11) // Decreased from 13 to move down 2 pixels
+                .zIndex(1) // Below the image but above content
             }
             .frame(height: listing.isFeatured ?? false ? standardHeight * 2 : standardHeight)
             .background(Color.white)

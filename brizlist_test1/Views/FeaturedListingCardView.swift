@@ -116,6 +116,26 @@ struct FeaturedListingCardView: View {
                     }
                 }
             )
+            .overlay(
+                // Symbols positioned at the bottom right
+                HStack(spacing: 6) {
+                    // Star for Briz Picks
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(.yellow)
+                        .opacity(listing.isBrizPick ?? false ? 1.0 : 0.0)
+                    
+                    // Heart symbol as a second example
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(.red)
+                        .opacity(0.8) // Just for demonstration
+                }
+                .padding(.trailing, 12)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                .padding(.bottom, 11) // Same as in ListingCardView
+                .zIndex(1)
+            )
         }
         .buttonStyle(PlainButtonStyle())
         .sheet(isPresented: $showingDetailView) {
