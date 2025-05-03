@@ -19,6 +19,11 @@ struct FeaturedListingCardView: View {
         return listing.isFeatured ?? false
     }
     
+    // Determine if the listing is new
+    private var isNewListing: Bool {
+        return listing.isNew ?? false
+    }
+    
     var body: some View {
         Button(action: {
             showingDetailView = true
@@ -80,17 +85,6 @@ struct FeaturedListingCardView: View {
                             .font(.caption2)
                         
                         Spacer()
-                        
-                        // NEW badge if the listing is new
-                        if listing.isNew == true {
-                            Text("NEW")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.green)
-                                .cornerRadius(4)
-                        }
                     }
                     .foregroundColor(.black)
                 }
@@ -99,6 +93,29 @@ struct FeaturedListingCardView: View {
             .frame(height: featuredHeight)
             .background(Color.white)
             .cornerRadius(12)
+            .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+            .overlay(
+                // Add the "NEW" badge in the top-right corner for new listings
+                ZStack {
+                    if isNewListing {
+                        VStack {
+                            HStack {
+                                Spacer()
+                                Text("NEW")
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Color.green)
+                                    .cornerRadius(8)
+                                    .padding(8)
+                            }
+                            Spacer()
+                        }
+                    }
+                }
+            )
         }
         .buttonStyle(PlainButtonStyle())
         .sheet(isPresented: $showingDetailView) {

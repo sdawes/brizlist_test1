@@ -217,15 +217,23 @@ class ListingsViewModel: ObservableObject {
             cacheAllAvailableFilters(from: newListings)
         }
         
+        // Sort listings to put new listings at the top
+        let sortedListings = sortListingsWithNewAtTop(newListings)
+        
         // We still use separateFeaturedListings for reference, but we'll include all listings in the main array
-        let (featured, regular) = separateFeaturedListings(newListings)
+        let (featured, regular) = separateFeaturedListings(sortedListings)
         
         if isInitialFetch {
             featuredListings = featured
-            listings = newListings  // Use all listings, not just regular
+            listings = sortedListings  // Use all sorted listings
         } else {
             featuredListings.append(contentsOf: featured)
-            listings.append(contentsOf: newListings)  // Use all listings, not just regular
+            listings.append(contentsOf: sortedListings)  // Use all sorted listings
+            
+            // Re-sort the combined list to ensure new listings are at the top
+            if isInitialFetch == false {
+                listings = sortListingsWithNewAtTop(listings)
+            }
         }
     }
     
@@ -425,5 +433,27 @@ class ListingsViewModel: ObservableObject {
     // Get cached tags (for Filter sheet)
     func getCachedTags() -> [String] {
         return cachedTags
+    }
+    
+    // Sort listings to prioritize new listings at the top
+    private func sortListingsWithNewAtTop(_ listings: [Listing]) -> [Listing] {
+        return listings.sorted { first, second in
+            // First priority: New listings at the top
+            if (first.isNew ?? false) && !(second.isNew ?? false) {
+                return true
+            } else if !(first.isNew ?? false) && (second.isNew ?? false) {
+                return false
+            }
+            
+            // Second priority: Featured listings
+            if (first.isFeatured ?? false) && !(second.isFeatured ?? false) {
+                return true
+            } else if !(first.isFeatured ?? false) && (second.isFeatured ?? false) {
+                return false
+            }
+            
+            // Third priority: Alphabetically by name
+            return first.name < second.name
+        }
     }
 }
