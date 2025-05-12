@@ -47,19 +47,27 @@ struct FeaturedListingCardView: View {
         var width = CGFloat.zero
         var height = CGFloat.zero
         
-        // Combine tags1 and tags2
-        let allTags: [(String, Bool)] = listing.tags1.map { ($0, false) } + listing.tags2.map { ($0, true) }
+        // Combine tags1, tags2, and tags3
+        let allTags: [(String, Int)] = 
+            listing.tags1.map { ($0, 1) } + 
+            listing.tags2.map { ($0, 2) } + 
+            listing.tags3.map { ($0, 3) }
         
         return ZStack(alignment: .topLeading) {
             ForEach(Array(allTags.enumerated()), id: \.offset) { index, tagInfo in
                 let tag = tagInfo.0
-                let isSecondary = tagInfo.1
+                let tagType = tagInfo.1
                 
                 Group {
-                    if isSecondary {
+                    if tagType == 1 {
+                        // Primary tags (cream background)
+                        ListingStyling.tagPill(tag)
+                    } else if tagType == 2 {
+                        // Secondary tags (light grey background)
                         ListingStyling.greyTagPill(tag)
                     } else {
-                        ListingStyling.tagPill(tag)
+                        // Tertiary tags (light purple background)
+                        ListingStyling.purpleTagPill(tag)
                     }
                 }
                 .padding([.trailing, .bottom], 2)
@@ -91,61 +99,81 @@ struct FeaturedListingCardView: View {
         Button(action: {
             showingDetailView = true
         }) {
-            // Card structure
+            // New card structure with two-section design
             VStack(spacing: 0) {
-                // Top image section - covers full width, ~half height
-                FirebaseStorageImage(urlString: listing.imageUrl)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: minFeaturedHeight / 2)
-                    .clipShape(Rectangle())
-                
-                // Bottom content section
-                VStack(alignment: .leading, spacing: 4) {
-                    // Listing name - matched to ListingCardView style
-                    Text(listing.name)
-                        .font(.headline)
-                        .padding(.top, 4)
+                // Top section - image, name, description, location
+                VStack(spacing: 0) {
+                    // Image at the top - covers full width
+                    FirebaseStorageImage(urlString: listing.imageUrl)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: minFeaturedHeight / 2.5)
+                        .clipShape(Rectangle())
                     
+                    // Content section below image
+                    VStack(alignment: .leading, spacing: 4) {
+                        Spacer()
+                        .frame(height: 16) // Space above the name
+                        
+                        // Listing name
+                        Text(listing.name)
+                            .font(.headline)
+                            .lineLimit(1)
+                        
+                        // Description section
+                        if !listing.shortDescription.isEmpty {
+                            Text(listing.shortDescription)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.leading)
+                                .lineLimit(6) // Limit to 6 lines for very long descriptions
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.top, 8)
+                        }
+                        
+                        Spacer(minLength: 16) // Use Spacer with minLength to ensure minimum spacing
+                        
+                        // Footer with location on the left
+                        HStack(spacing: 4) {
+                            Image(systemName: "location.circle.fill")
+                                .font(.caption2)
+                            
+                            Text(listing.location.uppercased())
+                                .font(.caption2)
+                            
+                            Spacer()
+                        }
+                        .foregroundColor(.black)
+                        
+                        Spacer()
+                        .frame(height: 16) // Space below the location
+                    }
+                    .padding(.horizontal, 12)
+                }
+                .frame(minHeight: minFeaturedHeight * 0.85) // Top section takes 85% of the height
+                .background(Color.white)
+                
+                // Bottom section - tags with wrapping (dynamic height)
+                VStack(spacing: 0) {
                     // Tags row - containing both tags1 and tags2 flowing with wrapping
                     if !listing.tags1.isEmpty || !listing.tags2.isEmpty {
                         wrappingTagsView
-                            .frame(height: tagsHeight > 0 ? tagsHeight : (listing.tags1.isEmpty && listing.tags2.isEmpty ? 0 : 30))
-                            .padding(.top, 8)
-                    }
-                    
-                    // Description section - matched to ListingCardView style
-                    if !listing.shortDescription.isEmpty {
-                        Text(listing.shortDescription)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.leading)
-                            .fixedSize(horizontal: false, vertical: true)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.top, 8)
+                            .padding(.vertical, 12) // Consistent vertical padding
+                            .frame(height: tagsHeight > 0 ? tagsHeight + 24 : 40) // Height + padding
+                    } else {
+                        // Empty spacer if no tags to maintain minimum height
+                        Spacer().frame(height: 40)
                     }
-                    
-                    Spacer()
-                    
-                    // Footer with location on the left
-                    HStack(spacing: 4) {
-                        Image(systemName: "location.circle.fill")
-                            .font(.caption2)
-                        
-                        Text(listing.location.uppercased())
-                            .font(.caption2)
-                        
-                        Spacer()
-                    }
-                    .foregroundColor(.black)
                 }
-                .padding(12)
+                .padding(.horizontal, 12)
+                .background(Color(.systemGray6)) // Light gray background for the bottom section
             }
             .frame(minHeight: minFeaturedHeight)
-            .background(Color.white)
             .cornerRadius(12)
             .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
             .overlay(
-                // Add badge in the top-right corner (NEW or FEATURED)
+                // Add badge in the top-right corner (NEW)
                 ZStack {
                     if isNewListing {
                         VStack {

@@ -57,19 +57,27 @@ struct ListingDetailView: View {
         var width = CGFloat.zero
         var height = CGFloat.zero
         
-        // Combine tags1 and tags2
-        let allTags: [(String, Bool)] = listing.tags1.map { ($0, false) } + listing.tags2.map { ($0, true) }
+        // Combine tags1, tags2, and tags3
+        let allTags: [(String, Int)] = 
+            listing.tags1.map { ($0, 1) } + 
+            listing.tags2.map { ($0, 2) } + 
+            listing.tags3.map { ($0, 3) }
         
         return ZStack(alignment: .topLeading) {
             ForEach(Array(allTags.enumerated()), id: \.offset) { index, tagInfo in
                 let tag = tagInfo.0
-                let isSecondary = tagInfo.1
+                let tagType = tagInfo.1
                 
                 Group {
-                    if isSecondary {
+                    if tagType == 1 {
+                        // Primary tags (cream background)
+                        ListingStyling.tagPill(tag)
+                    } else if tagType == 2 {
+                        // Secondary tags (light grey background)
                         ListingStyling.greyTagPill(tag)
                     } else {
-                        ListingStyling.tagPill(tag)
+                        // Tertiary tags (light purple background)
+                        ListingStyling.purpleTagPill(tag)
                     }
                 }
                     .padding([.trailing, .bottom], 2)
@@ -114,10 +122,10 @@ struct ListingDetailView: View {
                     Text(listing.name)
                         .font(.title3.bold())
                     
-                    // Combined tags - both primary and secondary in a continuous flow with wrapping
-                    if !listing.tags1.isEmpty || !listing.tags2.isEmpty {
+                    // Combined tags - primary, secondary, and tertiary in a continuous flow with wrapping
+                    if !listing.tags1.isEmpty || !listing.tags2.isEmpty || !listing.tags3.isEmpty {
                         wrappingTagsView
-                            .frame(height: tagsHeight > 0 ? tagsHeight : (listing.tags1.isEmpty && listing.tags2.isEmpty ? 0 : 30))
+                            .frame(height: tagsHeight > 0 ? tagsHeight : 30)
                             .padding(.bottom, 8)
                     }
                     

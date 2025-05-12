@@ -24,6 +24,7 @@ class ListingsViewModel: ObservableObject {
     // Cache all available filters (populated after first fetch)
     private var cachedTags1: [String] = []
     private var cachedTags2: [String] = []
+    private var cachedTags3: [String] = []
     private var cachedTags: [String] = []
     
     private let db = Firestore.firestore()
@@ -246,6 +247,7 @@ class ListingsViewModel: ObservableObject {
             name: data["name"] as? String ?? "",
             tags1: data["tags1"] as? [String] ?? [],
             tags2: data["tags2"] as? [String] ?? [],
+            tags3: data["tags3"] as? [String] ?? [],
             shortDescription: data["shortDescription"] as? String ?? "",
             longDescription: data["longDescription"] as? String ?? "",
             location: data["location"] as? String ?? "",
@@ -426,6 +428,7 @@ class ListingsViewModel: ObservableObject {
     private func cacheAllAvailableFilters(from listings: [Listing]) {
         var tags1 = Set<String>()
         var tags2 = Set<String>()
+        var tags3 = Set<String>()
         var tags = Set<String>()
         
         for listing in listings {
@@ -440,11 +443,15 @@ class ListingsViewModel: ObservableObject {
             
             // Process tags2
             tags2.formUnion(listing.tags2)
+            
+            // Process tags3
+            tags3.formUnion(listing.tags3)
         }
         
         // Update cache
         self.cachedTags1 = Array(tags1)
         self.cachedTags2 = Array(tags2)
+        self.cachedTags3 = Array(tags3)
         self.cachedTags = Array(tags)
     }
     
@@ -456,6 +463,11 @@ class ListingsViewModel: ObservableObject {
     // Get cached tags2 (for display purposes only)
     func getCachedTags2() -> [String] {
         return cachedTags2
+    }
+    
+    // Get cached tags3 (for display purposes only)
+    func getCachedTags3() -> [String] {
+        return cachedTags3
     }
     
     // Get cached tags (for Filter sheet)
@@ -476,5 +488,21 @@ class ListingsViewModel: ObservableObject {
             // Everything else (including featured) sorted alphabetically by name
             return first.name < second.name
         }
+    }
+    
+    // Get all unique tags3 from current listings - for display purposes only, not filtering
+    func getAllUniqueTags3() -> [String] {
+        var allTags3 = Set<String>()
+        
+        // Collect tags3 from all listings
+        for listing in listings {
+            allTags3.formUnion(listing.tags3)
+        }
+        
+        for listing in featuredListings {
+            allTags3.formUnion(listing.tags3)
+        }
+        
+        return Array(allTags3).sorted()
     }
 }

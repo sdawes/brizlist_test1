@@ -91,6 +91,20 @@ struct ListingStyling {
             )
     }
 
+    // Purple tag pill for tertiary tags
+    static func purpleTagPill(_ tag: String) -> some View {
+        return Text(tag.uppercased())
+            .font(.system(size: 10))
+            .fontWeight(.medium)
+            .foregroundColor(.black)
+            .padding(.vertical, 2.5)
+            .padding(.horizontal, 7)
+            .background(
+                Rectangle()
+                    .fill(Color.purple.opacity(0.15))
+            )
+    }
+
     // Helper function for backward compatibility
     static func styleForTag(_ tag: String) -> (systemName: String, color: Color) {
         // All tags now use the same style, but keeping method for backward compatibility
@@ -125,6 +139,17 @@ struct ListingStyling {
             HStack(spacing: 4) {
                 ForEach(tags2, id: \.self) { filter in
                     greyTagPill(filter)
+                }
+            }
+        }
+    }
+    
+    // Method for displaying tertiary tags with purple styling
+    static func tags3View(tags3: [String]) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 4) {
+                ForEach(tags3, id: \.self) { filter in
+                    purpleTagPill(filter)
                 }
             }
         }
