@@ -10,9 +10,10 @@ import SwiftUI
 struct ListingCardView: View {
     let listing: Listing
     @State private var showingDetailView = false
+    @State private var tagsHeight: CGFloat = 0
     
-    // Standard card height
-    private let standardHeight: CGFloat = 160
+    // Standard card height - made flexible to accommodate content
+    private let minStandardHeight: CGFloat = 160
     
     // Helper for checking featured status
     var isFeatured: Bool {
@@ -24,6 +25,68 @@ struct ListingCardView: View {
         return listing.isNew ?? false
     }
     
+    // Simple wrapping HStack for tags with dynamic height
+    private var wrappingTagsView: some View {
+        GeometryReader { geometry in
+            self.generateTagsContent(in: geometry)
+                .background(
+                    GeometryReader { heightGeometry -> Color in
+                        let height = heightGeometry.size.height
+                        DispatchQueue.main.async {
+                            if height > 0 {
+                                self.tagsHeight = height
+                            }
+                        }
+                        return Color.clear
+                    }
+                )
+        }
+    }
+    
+    private func generateTagsContent(in g: GeometryProxy) -> some View {
+        var width = CGFloat.zero
+        var height = CGFloat.zero
+        
+        // Combine tags1 and tags2
+        let allTags: [(String, Bool)] = listing.tags1.map { ($0, false) } + listing.tags2.map { ($0, true) }
+        
+        return ZStack(alignment: .topLeading) {
+            ForEach(Array(allTags.enumerated()), id: \.offset) { index, tagInfo in
+                let tag = tagInfo.0
+                let isSecondary = tagInfo.1
+                
+                Group {
+                    if isSecondary {
+                        ListingStyling.greyTagPill(tag)
+                    } else {
+                        ListingStyling.tagPill(tag)
+                    }
+                }
+                .padding([.trailing, .bottom], 2)
+                .alignmentGuide(.leading) { d in
+                    if (abs(width - d.width) > g.size.width) {
+                        width = 0
+                        height -= d.height
+                    }
+                    let result = width
+                    if index == allTags.count - 1 {
+                        width = 0 // last item
+                    } else {
+                        width -= d.width
+                    }
+                    return result
+                }
+                .alignmentGuide(.top) { _ in
+                    let result = height
+                    if index == allTags.count - 1 {
+                        height = 0 // last item
+                    }
+                    return result
+                }
+            }
+        }
+    }
+    
     var body: some View {
         Button(action: {
             showingDetailView = true
@@ -32,7 +95,7 @@ struct ListingCardView: View {
             ZStack(alignment: .top) {
                 // Main content area
                 VStack(alignment: .leading, spacing: 4) {
-                    // Name and cuisine in the same row
+                    // Name row
                     HStack {
                         // Listing name
                         Text(listing.name)
@@ -44,33 +107,30 @@ struct ListingCardView: View {
                     .padding(.top, 4)
                     .padding(.trailing, 140) // Keep space for the image
                     
-                    // Tags row - now placed below the name
-                    HStack {
-                        // Only show tags if available
-                        if !listing.tags1.isEmpty {
-                            ListingStyling.tags1View(tags1: listing.tags1)
-                        }
-                        
-                        Spacer()
+                    // Tags row - containing both tags1 and tags2 flowing with wrapping
+                    if !listing.tags1.isEmpty || !listing.tags2.isEmpty {
+                        wrappingTagsView
+                            .frame(height: tagsHeight > 0 ? tagsHeight : (listing.tags1.isEmpty && listing.tags2.isEmpty ? 0 : 30))
+                            .padding(.top, 8)
+                            .frame(width: UIScreen.main.bounds.width - 180, alignment: .leading)
                     }
-                    .padding(.top, 8)
-                    .padding(.trailing, 140) // Keep consistent with the name/cuisine row
                     
-                    // Description (if available)
+                    // Description (if available) - temporarily hidden
+                    /* 
                     if !listing.shortDescription.isEmpty {
                         Text(listing.shortDescription)
                             .font(.caption)
                             .foregroundColor(.secondary)
-                            .lineLimit(3)
                             .multilineTextAlignment(.leading)
                             .fixedSize(horizontal: false, vertical: true)
-                            .frame(width: UIScreen.main.bounds.width * 0.45, alignment: .leading)
+                            .frame(width: UIScreen.main.bounds.width * 0.50, alignment: .leading)
                             .padding(.top, 8)
                     }
+                    */
                     
                     Spacer()
                     
-                    // Footer with just location
+                    // Footer with location on the left
                     HStack(spacing: 4) {
                         Image(systemName: "location.circle.fill")
                             .font(.caption2)
@@ -91,30 +151,10 @@ struct ListingCardView: View {
                     .frame(width: 120, height: 120)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                     .padding(.trailing, 12)
-                    .padding(.top, 14) // Increased from 12 to move down 2 pixels
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                    .zIndex(2)
-                
-                // Symbols positioned vertically centered between image bottom and card bottom
-                HStack(spacing: 6) {
-                    // Star for Briz Picks
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 10))
-                        .foregroundColor(.yellow)
-                        .opacity(listing.isBrizPick ?? false ? 1.0 : 0.0)
-                    
-                    // Heart symbol as a second example
-                    Image(systemName: "heart.fill")
-                        .font(.system(size: 10))
-                        .foregroundColor(.red)
-                        .opacity(0.8) // Just for demonstration
-                }
-                .padding(.trailing, 12)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                .padding(.bottom, 11) // Decreased from 13 to move down 2 pixels
-                .zIndex(1) // Below the image but above content
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                    .padding(.vertical, (minStandardHeight - 120) / 2) // Center vertically with equal spacing
             }
-            .frame(height: listing.isFeatured ?? false ? standardHeight * 2 : standardHeight)
+            .frame(minHeight: listing.isFeatured ?? false ? minStandardHeight * 2 : minStandardHeight)
             .background(Color.white)
             .cornerRadius(12)
             .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)

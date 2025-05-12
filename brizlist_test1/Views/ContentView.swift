@@ -70,7 +70,7 @@ struct ListingsScrollView: View {
             }
             
             LazyVStack(spacing: 16) {
-                // All listings in a single flow
+                // All listings in a single flow, sorted with new at top then alphabetically
                 ForEach(viewModel.listings) { listing in
                     if listing.isFeatured ?? false {
                         FeaturedListingCardView(listing: listing)

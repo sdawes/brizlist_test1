@@ -12,6 +12,7 @@ struct Listing: Identifiable, Codable {
     @DocumentID var id: String? // Optional because Firebase generates this automatically
     var name: String
     var tags1: [String]  // Renamed from typeFilters
+    var tags2: [String]  // New field for secondary tags
     var shortDescription: String  // Renamed from description
     var longDescription: String  // New field for detailed description
     var location: String
@@ -27,10 +28,11 @@ struct Listing: Identifiable, Codable {
     }
     
     // Updated initializer with consistent required/optional parameters
-    init(id: String? = nil, name: String, tags1: [String] = [], shortDescription: String, longDescription: String = "", location: String, imageUrl: String? = nil, isBrizPick: Bool? = nil, isFeatured: Bool? = nil, isNew: Bool? = nil) {
+    init(id: String? = nil, name: String, tags1: [String] = [], tags2: [String] = [], shortDescription: String, longDescription: String = "", location: String, imageUrl: String? = nil, isBrizPick: Bool? = nil, isFeatured: Bool? = nil, isNew: Bool? = nil) {
         self.id = id
         self.name = name
         self.tags1 = tags1
+        self.tags2 = tags2
         self.shortDescription = shortDescription
         self.longDescription = longDescription
         self.location = location

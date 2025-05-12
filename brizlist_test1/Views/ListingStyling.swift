@@ -76,6 +76,20 @@ struct ListingStyling {
                     .fill(Color(red: 0.93, green: 0.87, blue: 0.76))
             )
     }
+    
+    // Grey tag pill for secondary tags
+    static func greyTagPill(_ tag: String) -> some View {
+        return Text(tag.uppercased())
+            .font(.system(size: 10))
+            .fontWeight(.medium)
+            .foregroundColor(.black)
+            .padding(.vertical, 2.5)
+            .padding(.horizontal, 7)
+            .background(
+                Rectangle()
+                    .fill(Color.gray.opacity(0.2))
+            )
+    }
 
     // Helper function for backward compatibility
     static func styleForTag(_ tag: String) -> (systemName: String, color: Color) {
@@ -100,6 +114,17 @@ struct ListingStyling {
             HStack(spacing: 4) {
                 ForEach(tags1, id: \.self) { filter in
                     tagPill(filter)
+                }
+            }
+        }
+    }
+    
+    // Method for displaying secondary tags with grey styling
+    static func tags2View(tags2: [String]) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 4) {
+                ForEach(tags2, id: \.self) { filter in
+                    greyTagPill(filter)
                 }
             }
         }

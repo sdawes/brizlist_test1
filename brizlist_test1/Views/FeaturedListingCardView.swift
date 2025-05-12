@@ -10,9 +10,10 @@ import SwiftUI
 struct FeaturedListingCardView: View {
     let listing: Listing
     @State private var showingDetailView = false
+    @State private var tagsHeight: CGFloat = 0
     
-    // Featured card height
-    private let featuredHeight: CGFloat = 320
+    // Featured card height - made flexible to accommodate content
+    private let minFeaturedHeight: CGFloat = 320
     
     // Verify that this listing is actually featured (defensive check)
     var isFeatured: Bool {
@@ -24,6 +25,68 @@ struct FeaturedListingCardView: View {
         return listing.isNew ?? false
     }
     
+    // Simple wrapping HStack for tags with dynamic height
+    private var wrappingTagsView: some View {
+        GeometryReader { geometry in
+            self.generateTagsContent(in: geometry)
+                .background(
+                    GeometryReader { heightGeometry -> Color in
+                        let height = heightGeometry.size.height
+                        DispatchQueue.main.async {
+                            if height > 0 {
+                                self.tagsHeight = height
+                            }
+                        }
+                        return Color.clear
+                    }
+                )
+        }
+    }
+    
+    private func generateTagsContent(in g: GeometryProxy) -> some View {
+        var width = CGFloat.zero
+        var height = CGFloat.zero
+        
+        // Combine tags1 and tags2
+        let allTags: [(String, Bool)] = listing.tags1.map { ($0, false) } + listing.tags2.map { ($0, true) }
+        
+        return ZStack(alignment: .topLeading) {
+            ForEach(Array(allTags.enumerated()), id: \.offset) { index, tagInfo in
+                let tag = tagInfo.0
+                let isSecondary = tagInfo.1
+                
+                Group {
+                    if isSecondary {
+                        ListingStyling.greyTagPill(tag)
+                    } else {
+                        ListingStyling.tagPill(tag)
+                    }
+                }
+                .padding([.trailing, .bottom], 2)
+                .alignmentGuide(.leading) { d in
+                    if (abs(width - d.width) > g.size.width) {
+                        width = 0
+                        height -= d.height
+                    }
+                    let result = width
+                    if index == allTags.count - 1 {
+                        width = 0 // last item
+                    } else {
+                        width -= d.width
+                    }
+                    return result
+                }
+                .alignmentGuide(.top) { _ in
+                    let result = height
+                    if index == allTags.count - 1 {
+                        height = 0 // last item
+                    }
+                    return result
+                }
+            }
+        }
+    }
+    
     var body: some View {
         Button(action: {
             showingDetailView = true
@@ -33,7 +96,7 @@ struct FeaturedListingCardView: View {
                 // Top image section - covers full width, ~half height
                 FirebaseStorageImage(urlString: listing.imageUrl)
                     .frame(maxWidth: .infinity)
-                    .frame(height: featuredHeight / 2)
+                    .frame(height: minFeaturedHeight / 2)
                     .clipShape(Rectangle())
                 
                 // Bottom content section
@@ -43,23 +106,18 @@ struct FeaturedListingCardView: View {
                         .font(.headline)
                         .padding(.top, 4)
                     
-                    // Tags and cuisine row in a single HStack
-                    HStack {
-                        // Only show tags if available
-                        if !listing.tags1.isEmpty {
-                            ListingStyling.tags1View(tags1: listing.tags1)
-                        }
-                        
-                        Spacer()
+                    // Tags row - containing both tags1 and tags2 flowing with wrapping
+                    if !listing.tags1.isEmpty || !listing.tags2.isEmpty {
+                        wrappingTagsView
+                            .frame(height: tagsHeight > 0 ? tagsHeight : (listing.tags1.isEmpty && listing.tags2.isEmpty ? 0 : 30))
+                            .padding(.top, 8)
                     }
-                    .padding(.top, 8)
                     
                     // Description section - matched to ListingCardView style
                     if !listing.shortDescription.isEmpty {
                         Text(listing.shortDescription)
                             .font(.caption)
                             .foregroundColor(.secondary)
-                            .lineLimit(3)
                             .multilineTextAlignment(.leading)
                             .fixedSize(horizontal: false, vertical: true)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -68,7 +126,7 @@ struct FeaturedListingCardView: View {
                     
                     Spacer()
                     
-                    // Footer with location
+                    // Footer with location on the left
                     HStack(spacing: 4) {
                         Image(systemName: "location.circle.fill")
                             .font(.caption2)
@@ -82,7 +140,7 @@ struct FeaturedListingCardView: View {
                 }
                 .padding(12)
             }
-            .frame(height: featuredHeight)
+            .frame(minHeight: minFeaturedHeight)
             .background(Color.white)
             .cornerRadius(12)
             .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
@@ -107,26 +165,6 @@ struct FeaturedListingCardView: View {
                         }
                     }
                 }
-            )
-            .overlay(
-                // Symbols positioned at the bottom right
-                HStack(spacing: 6) {
-                    // Star for Briz Picks
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 10))
-                        .foregroundColor(.yellow)
-                        .opacity(listing.isBrizPick ?? false ? 1.0 : 0.0)
-                    
-                    // Heart symbol as a second example
-                    Image(systemName: "heart.fill")
-                        .font(.system(size: 10))
-                        .foregroundColor(.red)
-                        .opacity(0.8) // Just for demonstration
-                }
-                .padding(.trailing, 12)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                .padding(.bottom, 11) // Same as in ListingCardView
-                .zIndex(1)
             )
         }
         .buttonStyle(PlainButtonStyle())

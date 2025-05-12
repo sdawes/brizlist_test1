@@ -23,6 +23,7 @@ class ListingsViewModel: ObservableObject {
     
     // Cache all available filters (populated after first fetch)
     private var cachedTags1: [String] = []
+    private var cachedTags2: [String] = []
     private var cachedTags: [String] = []
     
     private let db = Firestore.firestore()
@@ -217,20 +218,20 @@ class ListingsViewModel: ObservableObject {
             cacheAllAvailableFilters(from: newListings)
         }
         
-        // Sort listings to put new listings at the top
+        // Sort listings to prioritize new listings at the top, then alphabetically
         let sortedListings = sortListingsWithNewAtTop(newListings)
         
-        // We still use separateFeaturedListings for reference, but we'll include all listings in the main array
-        let (featured, regular) = separateFeaturedListings(sortedListings)
+        // We still use separateFeaturedListings for UI reference but we won't sort by featured status
+        let (featured, _) = separateFeaturedListings(sortedListings)
         
         if isInitialFetch {
             featuredListings = featured
             listings = sortedListings  // Use all sorted listings
         } else {
             featuredListings.append(contentsOf: featured)
-            listings.append(contentsOf: sortedListings)  // Use all sorted listings
+            listings.append(contentsOf: sortedListings)  // Append the new sorted listings
             
-            // Re-sort the combined list to ensure new listings are at the top
+            // Re-sort the combined list
             if isInitialFetch == false {
                 listings = sortListingsWithNewAtTop(listings)
             }
@@ -244,6 +245,7 @@ class ListingsViewModel: ObservableObject {
             id: document.documentID,
             name: data["name"] as? String ?? "",
             tags1: data["tags1"] as? [String] ?? [],
+            tags2: data["tags2"] as? [String] ?? [],
             shortDescription: data["shortDescription"] as? String ?? "",
             longDescription: data["longDescription"] as? String ?? "",
             location: data["location"] as? String ?? "",
@@ -318,6 +320,22 @@ class ListingsViewModel: ObservableObject {
         return Array(allTags1)
             .filter { !$0.lowercased().contains("tag") }
             .sorted()
+    }
+    
+    // Get all unique tags2 from current listings - for display purposes only, not filtering
+    func getAllUniqueTags2() -> [String] {
+        var allTags2 = Set<String>()
+        
+        // Collect tags2 from all listings
+        for listing in listings {
+            allTags2.formUnion(listing.tags2)
+        }
+        
+        for listing in featuredListings {
+            allTags2.formUnion(listing.tags2)
+        }
+        
+        return Array(allTags2).sorted()
     }
     
     // Get all tag filters (type filters that contain "tag")
@@ -407,9 +425,11 @@ class ListingsViewModel: ObservableObject {
     // Cache all available filters from unfiltered listings
     private func cacheAllAvailableFilters(from listings: [Listing]) {
         var tags1 = Set<String>()
+        var tags2 = Set<String>()
         var tags = Set<String>()
         
         for listing in listings {
+            // Process tags1
             for filter in listing.tags1 {
                 if filter.lowercased().contains("tag") {
                     tags.insert(filter)
@@ -417,10 +437,14 @@ class ListingsViewModel: ObservableObject {
                     tags1.insert(filter)
                 }
             }
+            
+            // Process tags2
+            tags2.formUnion(listing.tags2)
         }
         
         // Update cache
         self.cachedTags1 = Array(tags1)
+        self.cachedTags2 = Array(tags2)
         self.cachedTags = Array(tags)
     }
     
@@ -429,12 +453,17 @@ class ListingsViewModel: ObservableObject {
         return cachedTags1
     }
     
+    // Get cached tags2 (for display purposes only)
+    func getCachedTags2() -> [String] {
+        return cachedTags2
+    }
+    
     // Get cached tags (for Filter sheet)
     func getCachedTags() -> [String] {
         return cachedTags
     }
     
-    // Sort listings to prioritize new listings at the top
+    // Sort listings to prioritize new listings at the top, then alphabetically
     private func sortListingsWithNewAtTop(_ listings: [Listing]) -> [Listing] {
         return listings.sorted { first, second in
             // First priority: New listings at the top
@@ -444,14 +473,7 @@ class ListingsViewModel: ObservableObject {
                 return false
             }
             
-            // Second priority: Featured listings
-            if (first.isFeatured ?? false) && !(second.isFeatured ?? false) {
-                return true
-            } else if !(first.isFeatured ?? false) && (second.isFeatured ?? false) {
-                return false
-            }
-            
-            // Third priority: Alphabetically by name
+            // Everything else (including featured) sorted alphabetically by name
             return first.name < second.name
         }
     }

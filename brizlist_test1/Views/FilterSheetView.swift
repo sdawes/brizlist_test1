@@ -23,7 +23,7 @@ struct FilterSheetView: View {
         "isFeatured": ["bar", "kitchen"]
     ]
     
-    // Helper function to create a binding for type filters
+    // Helper function to create a binding for tags1 filters
     private func createTag1Binding(_ filter: String) -> Binding<Bool> {
         Binding(
             get: { viewModel.selectedTags1.contains(filter) },
@@ -52,12 +52,12 @@ struct FilterSheetView: View {
         )
     }
     
-    // Get all available type filters (for "Filter by Type" section)
+    // Get all available tags1 (for "Filter by Type" section)
     private var allAvailableTags1: [String] {
         let tags1 = viewModel.getAllUniqueTags1()
         let cachedTags1 = viewModel.getCachedTags1()
         
-        // Return both current type filters and those from cache
+        // Return both current tags1 and those from cache
         return Array(Set(tags1 + cachedTags1))
             .filter { !$0.lowercased().contains("tag") }
             .sorted()
@@ -135,14 +135,14 @@ struct FilterSheetView: View {
                 }
                 
                 List {
-                    // Type Filters Section - at the top
-                    Section(header: Text("Filter by Type")) {
+                    // Tags1 Section - Primary tags
+                    Section(header: Text("Primary Tags")) {
                         ForEach(allAvailableTags1, id: \.self) { filter in
                             Toggle(filter.capitalized, isOn: createTag1Binding(filter))
                         }
                     }
                     
-                    // Tags Section - in the middle
+                    // Tags Section - Category tags
                     Section(header: Text("Filter by Categories")) {
                         ForEach(allAvailableTags, id: \.self) { tag in
                             Toggle(tag.capitalized, isOn: createTag1Binding(tag))
