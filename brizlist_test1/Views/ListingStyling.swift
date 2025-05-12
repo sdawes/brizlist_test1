@@ -72,7 +72,7 @@ struct ListingStyling {
             .padding(.vertical, 2.5)
             .padding(.horizontal, 7)
             .background(
-                Capsule()
+                Rectangle()
                     .fill(Color(red: 0.93, green: 0.87, blue: 0.76))
             )
     }
@@ -95,10 +95,10 @@ struct ListingStyling {
     }
 
     // Adding a new method with updated name for future use
-    static func typeFiltersView(typeFilters: [String]) -> some View {
+    static func tags1View(tags1: [String]) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 4) {
-                ForEach(typeFilters, id: \.self) { filter in
+                ForEach(tags1, id: \.self) { filter in
                     tagPill(filter)
                 }
             }

@@ -14,7 +14,7 @@ struct FilterSheetView: View {
     @State private var showNoResultsWarning = false
     
     // Known incompatible combinations - hard-coded for performance
-    private let typeFilterExclusions: [String: [String]] = [
+    private let tags1Exclusions: [String: [String]] = [
         "bar": ["isFeatured"],
         "kitchen": ["isFeatured"]
     ]
@@ -24,14 +24,14 @@ struct FilterSheetView: View {
     ]
     
     // Helper function to create a binding for type filters
-    private func createTypeFilterBinding(_ filter: String) -> Binding<Bool> {
+    private func createTag1Binding(_ filter: String) -> Binding<Bool> {
         Binding(
-            get: { viewModel.selectedTypeFilters.contains(filter) },
+            get: { viewModel.selectedTags1.contains(filter) },
             set: { isSelected in
                 if isSelected {
-                    viewModel.selectTypeFilter(filter)
+                    viewModel.selectTag1(filter)
                 } else {
-                    viewModel.deselectTypeFilter(filter)
+                    viewModel.deselectTag1(filter)
                 }
                 // Check if current filter selections would yield results
                 checkForResults()
@@ -53,12 +53,12 @@ struct FilterSheetView: View {
     }
     
     // Get all available type filters (for "Filter by Type" section)
-    private var allAvailableTypeFilters: [String] {
-        let typeFilters = viewModel.getAllUniqueTypeFilters()
-        let cachedTypeFilters = viewModel.getCachedTypeFilters()
+    private var allAvailableTags1: [String] {
+        let tags1 = viewModel.getAllUniqueTags1()
+        let cachedTags1 = viewModel.getCachedTags1()
         
         // Return both current type filters and those from cache
-        return Array(Set(typeFilters + cachedTypeFilters))
+        return Array(Set(tags1 + cachedTags1))
             .filter { !$0.lowercased().contains("tag") }
             .sorted()
     }
@@ -73,9 +73,9 @@ struct FilterSheetView: View {
     }
     
     // Check if a type filter is compatible with currently selected Other Filters
-    private func isTypeFilterCompatible(_ filter: String) -> Bool {
+    private func isTag1Compatible(_ filter: String) -> Bool {
         // If already selected, it's compatible
-        if viewModel.selectedTypeFilters.contains(filter) {
+        if viewModel.selectedTags1.contains(filter) {
             return true
         }
         
@@ -97,9 +97,9 @@ struct FilterSheetView: View {
         }
         
         // Check for hard-coded incompatibilities
-        if let incompatibleTypes = typeFilterExclusions[field] {
+        if let incompatibleTypes = tags1Exclusions[field] {
             for type in incompatibleTypes {
-                if viewModel.selectedTypeFilters.contains(type) {
+                if viewModel.selectedTags1.contains(type) {
                     return false
                 }
             }
@@ -137,15 +137,15 @@ struct FilterSheetView: View {
                 List {
                     // Type Filters Section - at the top
                     Section(header: Text("Filter by Type")) {
-                        ForEach(allAvailableTypeFilters, id: \.self) { filter in
-                            Toggle(filter.capitalized, isOn: createTypeFilterBinding(filter))
+                        ForEach(allAvailableTags1, id: \.self) { filter in
+                            Toggle(filter.capitalized, isOn: createTag1Binding(filter))
                         }
                     }
                     
                     // Tags Section - in the middle
                     Section(header: Text("Filter by Categories")) {
                         ForEach(allAvailableTags, id: \.self) { tag in
-                            Toggle(tag.capitalized, isOn: createTypeFilterBinding(tag))
+                            Toggle(tag.capitalized, isOn: createTag1Binding(tag))
                         }
                     }
                     
@@ -166,7 +166,7 @@ struct FilterSheetView: View {
                         for filter in viewModel.availableFilters {
                             viewModel.activeFilterValues[filter.field] = false
                         }
-                        viewModel.clearTypeFilters()
+                        viewModel.clearTags1()
                         viewModel.fetchListings()
                         showNoResultsWarning = false
                     }

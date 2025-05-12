@@ -8,7 +8,7 @@
 import Foundation
 
 struct FormValidator {
-    static func isFormValid(name: String, typeFilters: [String], shortDescription: String, location: String) -> Bool {
-        return !name.isEmpty && !typeFilters.isEmpty && !shortDescription.isEmpty && !location.isEmpty
+    static func isFormValid(name: String, tags1: [String], shortDescription: String, location: String) -> Bool {
+        return !name.isEmpty && !tags1.isEmpty && !shortDescription.isEmpty && !location.isEmpty
     }
 }

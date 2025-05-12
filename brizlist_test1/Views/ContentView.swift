@@ -109,14 +109,14 @@ struct ListingsScrollView: View {
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 32)
                         
-                        if !viewModel.selectedTypeFilters.isEmpty {
+                        if !viewModel.selectedTags1.isEmpty {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Selected filters:")
                                     .font(.caption)
                                     .foregroundColor(.gray)
                                 
                                 HStack {
-                                    ForEach(Array(viewModel.selectedTypeFilters), id: \.self) { filter in
+                                    ForEach(Array(viewModel.selectedTags1), id: \.self) { filter in
                                         Text(filter.capitalized)
                                             .font(.caption)
                                             .foregroundColor(.white)

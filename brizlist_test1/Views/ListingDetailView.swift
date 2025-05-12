@@ -43,21 +43,15 @@ struct ListingDetailView: View {
                         .font(.title3.bold())
                     
                     HStack {
-                        if !listing.typeFilters.isEmpty {
+                        if !listing.tags1.isEmpty {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 8) {
-                                    ForEach(listing.typeFilters, id: \.self) { tag in
+                                    ForEach(listing.tags1, id: \.self) { tag in
                                         TagView(tag: tag.capitalized)
                                     }
                                 }
                             }
                             .padding(.bottom, 8)
-                        }
-                        
-                        if !listing.cuisine.isEmpty {
-                            Text(listing.cuisine)
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
                         }
                     }
                     

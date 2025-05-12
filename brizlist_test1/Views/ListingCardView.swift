@@ -40,24 +40,15 @@ struct ListingCardView: View {
                             .lineLimit(1)
                         
                         Spacer()
-                        
-                        // Cuisine on the right side but to the left of the image
-                        if !listing.cuisine.isEmpty {
-                            Text(listing.cuisine)
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                                .lineLimit(1)
-                                .padding(.leading, 4)
-                        }
                     }
                     .padding(.top, 4)
-                    .padding(.trailing, 140) // Increased from 124 to add more space between cuisine and image
+                    .padding(.trailing, 140) // Keep space for the image
                     
                     // Tags row - now placed below the name
                     HStack {
                         // Only show tags if available
-                        if !listing.typeFilters.isEmpty {
-                            ListingStyling.typeFiltersView(typeFilters: listing.typeFilters)
+                        if !listing.tags1.isEmpty {
+                            ListingStyling.tags1View(tags1: listing.tags1)
                         }
                         
                         Spacer()
@@ -128,9 +119,10 @@ struct ListingCardView: View {
             .cornerRadius(12)
             .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
             .overlay(
-                // Add the "NEW" badge in the top-right corner for new listings
+                // Add badge in the top-right corner (NEW or FEATURED)
                 ZStack {
                     if isNewListing {
+                        // Show NEW badge if listing is new
                         VStack {
                             HStack {
                                 Spacer()
@@ -141,6 +133,23 @@ struct ListingCardView: View {
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
                                     .background(Color.green)
+                                    .cornerRadius(8)
+                                    .padding(8)
+                            }
+                            Spacer()
+                        }
+                    } else if isFeatured {
+                        // Show FEATURED badge if listing is featured (but not new)
+                        VStack {
+                            HStack {
+                                Spacer()
+                                Text("FEATURED")
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Color.blue)
                                     .cornerRadius(8)
                                     .padding(8)
                             }

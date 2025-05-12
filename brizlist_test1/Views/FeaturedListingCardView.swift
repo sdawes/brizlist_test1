@@ -46,16 +46,8 @@ struct FeaturedListingCardView: View {
                     // Tags and cuisine row in a single HStack
                     HStack {
                         // Only show tags if available
-                        if !listing.typeFilters.isEmpty {
-                            ListingStyling.typeFiltersView(typeFilters: listing.typeFilters)
-                        }
-                        
-                        // Only show cuisine if it's not empty
-                        if !listing.cuisine.isEmpty {
-                            Text(listing.cuisine)
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                                .padding(.leading, 4)
+                        if !listing.tags1.isEmpty {
+                            ListingStyling.tags1View(tags1: listing.tags1)
                         }
                         
                         Spacer()
@@ -95,7 +87,7 @@ struct FeaturedListingCardView: View {
             .cornerRadius(12)
             .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
             .overlay(
-                // Add the "NEW" badge in the top-right corner for new listings
+                // Add badge in the top-right corner (NEW or FEATURED)
                 ZStack {
                     if isNewListing {
                         VStack {
