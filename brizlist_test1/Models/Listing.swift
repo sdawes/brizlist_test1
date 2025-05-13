@@ -19,8 +19,7 @@ struct Listing: Identifiable, Codable {
     var location: String
     var imageUrl: String?
     var isBrizPick: Bool?
-    var isFeatured: Bool?
-    var isNew: Bool?  // New field to indicate if a listing is new
+    var cardState: String  // New field that replaces isFeatured and isNew
     
     // Helper to get a displayable URL
     var displayImageUrl: URL? {
@@ -28,8 +27,17 @@ struct Listing: Identifiable, Codable {
         return URL(string: urlString)
     }
     
+    // Helper properties to check card state
+    var isNew: Bool {
+        return cardState == "new"
+    }
+    
+    var isFeatured: Bool {
+        return cardState == "featured"
+    }
+    
     // Updated initializer with consistent required/optional parameters
-    init(id: String? = nil, name: String, tags1: [String] = [], tags2: [String] = [], tags3: [String] = [], shortDescription: String, longDescription: String = "", location: String, imageUrl: String? = nil, isBrizPick: Bool? = nil, isFeatured: Bool? = nil, isNew: Bool? = nil) {
+    init(id: String? = nil, name: String, tags1: [String] = [], tags2: [String] = [], tags3: [String] = [], shortDescription: String, longDescription: String = "", location: String, imageUrl: String? = nil, isBrizPick: Bool? = nil, cardState: String = "default") {
         self.id = id
         self.name = name
         self.tags1 = tags1
@@ -40,7 +48,6 @@ struct Listing: Identifiable, Codable {
         self.location = location
         self.imageUrl = imageUrl
         self.isBrizPick = isBrizPick
-        self.isFeatured = isFeatured
-        self.isNew = isNew
+        self.cardState = cardState
     }
 }

@@ -15,12 +15,12 @@ struct FilterSheetView: View {
     
     // Known incompatible combinations - hard-coded for performance
     private let tags1Exclusions: [String: [String]] = [
-        "bar": ["isFeatured"],
-        "kitchen": ["isFeatured"]
+        "bar": ["cardState_featured"],
+        "kitchen": ["cardState_featured"]
     ]
     
     private let otherFilterExclusions: [String: [String]] = [
-        "isFeatured": ["bar", "kitchen"]
+        "cardState_featured": ["bar", "kitchen"]
     ]
     
     // Helper function to create a binding for tags1 filters

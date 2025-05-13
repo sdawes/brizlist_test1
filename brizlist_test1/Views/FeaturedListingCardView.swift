@@ -17,12 +17,12 @@ struct FeaturedListingCardView: View {
     
     // Verify that this listing is actually featured (defensive check)
     var isFeatured: Bool {
-        return listing.isFeatured ?? false
+        return listing.isFeatured
     }
     
     // Determine if the listing is new
     private var isNewListing: Bool {
-        return listing.isNew ?? false
+        return listing.isNew
     }
     
     // Simple wrapping HStack for tags with dynamic height

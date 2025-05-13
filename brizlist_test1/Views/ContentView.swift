@@ -72,7 +72,7 @@ struct ListingsScrollView: View {
             LazyVStack(spacing: 16) {
                 // All listings in a single flow, sorted with new at top then alphabetically
                 ForEach(viewModel.listings) { listing in
-                    if listing.isFeatured ?? false {
+                    if listing.cardState == "featured" {
                         FeaturedListingCardView(listing: listing)
                             .padding(.horizontal)
                             .onAppear {
@@ -81,6 +81,8 @@ struct ListingsScrollView: View {
                                 }
                             }
                     } else {
+                        // Use ListingCardView for both "new" and "default" states
+                        // The "NEW" badge will show automatically for "new" state
                         ListingCardView(listing: listing)
                             .padding(.horizontal)
                             .onAppear {

@@ -43,8 +43,8 @@ class ListingsViewModel: ObservableObject {
     // List of available filters (for UI and reference)
     let availableFilters: [FilterOption] = [
         FilterOption(field: "isBrizPick", displayName: "Briz Picks"),
-        FilterOption(field: "isFeatured", displayName: "Featured"),
-        FilterOption(field: "isNew", displayName: "New Listings"),
+        FilterOption(field: "cardState_featured", displayName: "Featured"),
+        FilterOption(field: "cardState_new", displayName: "New Listings"),
         // Add more filters as needed
     ]
     
@@ -117,7 +117,14 @@ class ListingsViewModel: ObservableObject {
         // Apply all other active filters
         for (field, isActive) in activeFilterValues {
             if isActive {
-                query = query.whereField(field, isEqualTo: true)
+                // Handle special case for cardState filters
+                if field == "cardState_featured" {
+                    query = query.whereField("cardState", isEqualTo: "featured")
+                } else if field == "cardState_new" {
+                    query = query.whereField("cardState", isEqualTo: "new")
+                } else {
+                    query = query.whereField(field, isEqualTo: true)
+                }
             }
         }
         
@@ -253,8 +260,7 @@ class ListingsViewModel: ObservableObject {
             location: data["location"] as? String ?? "",
             imageUrl: data["imageUrl"] as? String,
             isBrizPick: data["isBrizPick"] as? Bool,
-            isFeatured: data["isFeatured"] as? Bool,
-            isNew: data["isNew"] as? Bool
+            cardState: data["cardState"] as? String ?? "default"
         )
     }
     
@@ -270,7 +276,7 @@ class ListingsViewModel: ObservableObject {
         var regular: [Listing] = []
         
         for listing in listings {
-            if listing.isFeatured ?? false {
+            if listing.isFeatured {
                 featured.append(listing)
             } else {
                 regular.append(listing)
@@ -479,9 +485,9 @@ class ListingsViewModel: ObservableObject {
     private func sortListingsWithNewAtTop(_ listings: [Listing]) -> [Listing] {
         return listings.sorted { first, second in
             // First priority: New listings at the top
-            if (first.isNew ?? false) && !(second.isNew ?? false) {
+            if first.isNew && !second.isNew {
                 return true
-            } else if !(first.isNew ?? false) && (second.isNew ?? false) {
+            } else if !first.isNew && second.isNew {
                 return false
             }
             
