@@ -110,6 +110,22 @@ struct ListingCardView: View {
         }
     }
     
+    // MARK: - Helper Views
+    
+    // Status label for NEW listings
+    private func newStatusLabel() -> some View {
+        return Text("NEW")
+            .font(.system(size: 10))
+            .fontWeight(.medium)
+            .foregroundColor(.black)
+            .padding(.vertical, 2.5)
+            .padding(.horizontal, 7)
+            .background(
+                Rectangle()
+                    .fill(Color.green.opacity(0.3))
+            )
+    }
+    
     // MARK: - Card Design Functions
     
     // Standard card design (used for both default and new states)
@@ -122,12 +138,18 @@ struct ListingCardView: View {
                     Spacer()
                     .frame(height: 16) // Space above the name
                     
-                    // Name row
-                    HStack {
+                    // Name row with inline status labels
+                    HStack(spacing: 6) {
                         // Listing name
                         Text(listing.name)
-                            .font(.headline)
+                            .font(isFeatured ? .title3 : .headline)
+                            .fontWeight(.bold)
                             .lineLimit(1)
+                        
+                        // Inline status label (NEW only)
+                        if isNewListing {
+                            newStatusLabel()
+                        }
                         
                         Spacer()
                     }
@@ -169,10 +191,11 @@ struct ListingCardView: View {
                 FirebaseStorageImage(urlString: listing.imageUrl)
                     .frame(width: 120, height: 120)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
-                    .padding([.trailing, .top, .bottom], 16)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                    .padding(.trailing, 16)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                    .padding(.vertical, 16) // Equal padding above and below the image
             }
-            .frame(minHeight: standardHeight * 0.75, alignment: .top) // 75% height, allows expansion
+            .frame(minHeight: standardHeight * 0.75, alignment: .center) // 75% height, allows expansion with center alignment
             .background(Color.white)
             
             // Bottom section - tags with wrapping
@@ -181,7 +204,6 @@ struct ListingCardView: View {
         .frame(minHeight: standardHeight)
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-        .overlay(badgeOverlay())
     }
     
     // Featured card design (larger with top image)
@@ -192,7 +214,7 @@ struct ListingCardView: View {
                 // Image at the top - covers full width
                 FirebaseStorageImage(urlString: listing.imageUrl)
                     .frame(maxWidth: .infinity)
-                    .frame(height: featuredHeight / 2.5)
+                    .frame(height: featuredHeight / 2)  // Increased from 2.5 to 2 (50% of card height)
                     .clipShape(Rectangle())
                 
                 // Content section below image
@@ -201,9 +223,19 @@ struct ListingCardView: View {
                     .frame(height: 16) // Space above the name
                     
                     // Listing name
-                    Text(listing.name)
-                        .font(.headline)
-                        .lineLimit(1)
+                    HStack(spacing: 6) {
+                        Text(listing.name)
+                            .font(isFeatured ? .title3 : .headline)
+                            .fontWeight(.bold)
+                            .lineLimit(1)
+                        
+                        // Inline status label (NEW only)
+                        if isNewListing {
+                            newStatusLabel()
+                        }
+                        
+                        Spacer()
+                    }
                     
                     // Description section
                     if !listing.shortDescription.isEmpty {
@@ -217,7 +249,7 @@ struct ListingCardView: View {
                             .padding(.top, 8)
                     }
                     
-                    Spacer(minLength: 16) // Ensure minimum spacing
+                    Spacer(minLength: 8) // Reduced spacing between description and location
                     
                     // Footer with location
                     HStack(spacing: 4) {
@@ -232,7 +264,7 @@ struct ListingCardView: View {
                     .foregroundColor(.black)
                     
                     Spacer()
-                    .frame(height: 16) // Space below the location
+                    .frame(height: 12) // Reduced space below the location
                 }
                 .padding(.horizontal, 12)
             }
@@ -245,7 +277,6 @@ struct ListingCardView: View {
         .frame(minHeight: featuredHeight)
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-        .overlay(badgeOverlay())
     }
     
     // Shared tags section used by both card styles
@@ -255,56 +286,15 @@ struct ListingCardView: View {
             if !listing.tags1.isEmpty || !listing.tags2.isEmpty || !listing.tags3.isEmpty {
                 wrappingTagsView
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 12) // Consistent vertical padding
-                    .frame(height: tagsHeight > 0 ? tagsHeight + 24 : 40) // Dynamic height + padding
+                    .padding(.vertical, 8) // Reduced from 12 to 8
+                    .frame(height: tagsHeight > 0 ? tagsHeight + 16 : 30) // Reduced padding addition from 24 to 16, min height from 40 to 30
             } else {
                 // Empty spacer if no tags
-                Spacer().frame(height: 40)
+                Spacer().frame(height: 30) // Reduced from 40 to 30
             }
         }
         .padding(.horizontal, 12)
         .background(Color(.systemGray6)) // Light gray background
-    }
-    
-    // Badge overlay for NEW and FEATURED indicators
-    private func badgeOverlay() -> some View {
-        ZStack {
-            if isNewListing {
-                // Show NEW badge
-                VStack {
-                    HStack {
-                        Spacer()
-                        Text("NEW")
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.green)
-                            .cornerRadius(8)
-                            .padding(8)
-                    }
-                    Spacer()
-                }
-            } else if isFeatured && !isNewListing {
-                // Show FEATURED badge if featured but not new
-                VStack {
-                    HStack {
-                        Spacer()
-                        Text("FEATURED")
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.blue)
-                            .cornerRadius(8)
-                            .padding(8)
-                    }
-                    Spacer()
-                }
-            }
-        }
     }
     
     // MARK: - Main Body
@@ -314,7 +304,8 @@ struct ListingCardView: View {
             showingDetailView = true
         }) {
             // Choose card design based on cardState
-            if isFeatured {
+            // Use featured design for both featured and new listings
+            if isFeatured || isNewListing {
                 featuredCardDesign()
             } else {
                 standardCardDesign()
