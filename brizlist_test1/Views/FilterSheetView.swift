@@ -18,12 +18,19 @@ struct FilterSheetView: View {
     @State private var selectedTags2: Set<String> = []
     @State private var selectedTags3: Set<String> = []
     
+    // Track selected card states for filtering
+    @State private var selectedCardStates: Set<String> = []
+    
+    // Available card states
+    private let availableCardStates = ["new", "featured"]
+    
     // Apply all selected filters
     private func applyFilters() {
         // Update the viewModel's selected tags
         viewModel.clearTags1()
         viewModel.clearTags2()
         viewModel.clearTags3()
+        viewModel.clearCardStates()
         
         // Apply selected tags1
         for tag in selectedTags1 {
@@ -38,6 +45,11 @@ struct FilterSheetView: View {
         // Apply selected tags3
         for tag in selectedTags3 {
             viewModel.selectTag3(tag)
+        }
+        
+        // Apply selected card states
+        for cardState in selectedCardStates {
+            viewModel.selectCardState(cardState)
         }
         
         // Fetch filtered listings but don't dismiss the sheet yet
@@ -116,12 +128,36 @@ struct FilterSheetView: View {
         showNoResultsWarning = false
     }
     
+    // Toggle selection of a card state (only changes local state, doesn't apply filter yet)
+    private func toggleCardState(_ cardState: String) {
+        if selectedCardStates.contains(cardState) {
+            selectedCardStates.remove(cardState)
+        } else {
+            selectedCardStates.insert(cardState)
+        }
+        // Hide any previous warning when changing selection
+        showNoResultsWarning = false
+    }
+    
+    // Get color for card state
+    private func colorForCardState(_ cardState: String) -> Color {
+        switch cardState.lowercased() {
+        case "new":
+            return Color.green.opacity(0.3)
+        case "featured":
+            return Color.blue.opacity(0.3)
+        default:
+            return Color.gray.opacity(0.2)
+        }
+    }
+    
     // Reset all filters
     private func resetAllFilters() {
         // Clear tag selections in local state
         selectedTags1.removeAll()
         selectedTags2.removeAll()
         selectedTags3.removeAll()
+        selectedCardStates.removeAll()
         
         // Reset all filters in the viewModel
         viewModel.clearAllFilters()
@@ -165,6 +201,45 @@ struct FilterSheetView: View {
                             .foregroundColor(.secondary)
                             .padding(.horizontal)
                             .padding(.top, 4)
+                        
+                        // Card state filter section (NEW and FEATURED)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Divider()
+                                .padding(.horizontal)
+                            
+                            // Add more vertical space after the divider
+                            Spacer()
+                                .frame(height: 12)
+                            
+                            HStack(spacing: 6) {
+                                ForEach(availableCardStates, id: \.self) { cardState in
+                                    Button(action: {
+                                        toggleCardState(cardState)
+                                    }) {
+                                        Text(cardState.uppercased())
+                                            .font(.system(size: 12))
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.black)
+                                            .padding(.vertical, 6)
+                                            .padding(.horizontal, 10)
+                                            .background(
+                                                Rectangle()
+                                                    .fill(colorForCardState(cardState))
+                                                    .overlay(
+                                                        Rectangle()
+                                                            .stroke(selectedCardStates.contains(cardState) ? 
+                                                                Color(red: 0.8, green: 0.2, blue: 0.2) : Color.clear,
+                                                                lineWidth: 1.5)
+                                                    )
+                                            )
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                }
+                                
+                                Spacer()
+                            }
+                            .padding(.horizontal)
+                        }
                         
                         if allAvailableTags1.isEmpty && allAvailableTags2.isEmpty && allAvailableTags3.isEmpty {
                             Text("No tags available")
@@ -330,6 +405,7 @@ struct FilterSheetView: View {
                 selectedTags1 = Set(viewModel.selectedTags1)
                 selectedTags2 = Set(viewModel.selectedTags2)
                 selectedTags3 = Set(viewModel.selectedTags3)
+                selectedCardStates = Set(viewModel.selectedCardStates)
                 
                 // Reset warning state when view appears
                 showNoResultsWarning = false

@@ -27,6 +27,9 @@ class ListingsViewModel: ObservableObject {
     @Published var selectedTags2: Set<String> = []
     @Published var selectedTags3: Set<String> = []
     
+    // Selected card states for filtering
+    @Published var selectedCardStates: Set<String> = []
+    
     // Cache available tags for filter UI
     private var cachedTags1: [String] = []
     private var cachedTags2: [String] = []
@@ -174,11 +177,39 @@ class ListingsViewModel: ObservableObject {
         selectedTags3.removeAll()
     }
     
+    /// Select a card state for filtering
+    func selectCardState(_ cardState: String) {
+        selectedCardStates.insert(cardState)
+        // Don't fetch immediately - we'll do that when 'Apply' is pressed
+    }
+    
+    /// Deselect a card state for filtering
+    func deselectCardState(_ cardState: String) {
+        selectedCardStates.remove(cardState)
+        // Don't fetch immediately - we'll do that when 'Apply' is pressed
+    }
+    
+    /// Toggle selection of a card state
+    func toggleCardState(_ cardState: String) {
+        if selectedCardStates.contains(cardState) {
+            selectedCardStates.remove(cardState)
+        } else {
+            selectedCardStates.insert(cardState)
+        }
+        // Don't fetch immediately - we'll do that when 'Apply' is pressed
+    }
+    
+    /// Clear all card state selections
+    func clearCardStates() {
+        selectedCardStates.removeAll()
+    }
+    
     /// Clear all tag selections
     func clearAllFilters() {
         selectedTags1.removeAll()
         selectedTags2.removeAll()
         selectedTags3.removeAll()
+        selectedCardStates.removeAll()
         
         // Now fetch listings without filters
         fetchListings()
@@ -188,7 +219,7 @@ class ListingsViewModel: ObservableObject {
     
     /// Check if any tag filtering is active
     var hasTagFilters: Bool {
-        return !selectedTags1.isEmpty || !selectedTags2.isEmpty || !selectedTags3.isEmpty
+        return !selectedTags1.isEmpty || !selectedTags2.isEmpty || !selectedTags3.isEmpty || !selectedCardStates.isEmpty
     }
     
     /// Check if any filtering is active
@@ -450,6 +481,18 @@ class ListingsViewModel: ObservableObject {
             }
         }
         
+        // Process card state filtering
+        if !selectedCardStates.isEmpty {
+            filteredDocuments = filteredDocuments.filter { document in
+                guard let cardState = document.data()["cardState"] as? String else {
+                    return false
+                }
+                
+                // Only include this document if its cardState is one of the selected ones
+                return selectedCardStates.contains(cardState)
+            }
+        }
+        
         // Check if we have results after client-side filtering
         if filteredDocuments.isEmpty {
             hasMoreListings = false
@@ -510,7 +553,6 @@ class ListingsViewModel: ObservableObject {
             longDescription: data["longDescription"] as? String ?? "",
             location: data["location"] as? String ?? "",
             imageUrl: data["imageUrl"] as? String,
-            isBrizPick: data["isBrizPick"] as? Bool,
             cardState: data["cardState"] as? String ?? "default"
         )
     }

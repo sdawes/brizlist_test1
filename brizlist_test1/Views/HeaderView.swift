@@ -15,7 +15,7 @@ struct HeaderView: View {
     
     // Compute the total number of active filters across all tag types
     private var totalActiveFilters: Int {
-        return viewModel.selectedTags1.count + viewModel.selectedTags2.count + viewModel.selectedTags3.count
+        return viewModel.selectedTags1.count + viewModel.selectedTags2.count + viewModel.selectedTags3.count + viewModel.selectedCardStates.count
     }
 
     var body: some View {

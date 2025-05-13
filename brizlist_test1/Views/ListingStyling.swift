@@ -68,46 +68,6 @@ struct ListingStyling {
             .foregroundColor(.black)
     }
 
-
-    // MARK: - BrizPick Styling
-    
-    static func brizPickBadge() -> some View {
-        HStack(spacing: 4) {
-            // Enhanced rainbow gradient star
-            Image(systemName: "star.fill")
-                .font(.caption)
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [.red, .orange, .yellow, .green, .blue, .purple, .pink],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-            
-            // Briz Pick text in black
-            Text("Briz Pick")
-                .font(.caption)
-                .fontWeight(.bold)
-                .foregroundColor(.black)
-        }
-    }
-
-    // MARK: - BrizPick Star Styling
-    
-    static func brizPickStar() -> some View {
-        Image(systemName: "star.fill")
-            .font(.caption)
-            .foregroundColor(.red) // Standard system red
-    }
-
-    // MARK: - BrizPick Custom Symbol
-    
-    static func brizPickCustomSymbol() -> some View {
-        Image(systemName: "star.fill")
-            .font(.system(size: 12))
-            .foregroundColor(.white)
-    }
-
     // MARK: - Tag Pills
 
     static func tagPill(_ tag: String) -> some View {

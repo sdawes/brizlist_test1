@@ -18,7 +18,6 @@ struct Listing: Identifiable, Codable {
     var longDescription: String  // New field for detailed description
     var location: String
     var imageUrl: String?
-    var isBrizPick: Bool?
     var cardState: String  // New field that replaces isFeatured and isNew
     
     // Helper to get a displayable URL
@@ -37,7 +36,7 @@ struct Listing: Identifiable, Codable {
     }
     
     // Updated initializer with consistent required/optional parameters
-    init(id: String? = nil, name: String, tags1: [String] = [], tags2: [String] = [], tags3: [String] = [], shortDescription: String, longDescription: String = "", location: String, imageUrl: String? = nil, isBrizPick: Bool? = nil, cardState: String = "default") {
+    init(id: String? = nil, name: String, tags1: [String] = [], tags2: [String] = [], tags3: [String] = [], shortDescription: String, longDescription: String = "", location: String, imageUrl: String? = nil, cardState: String = "default") {
         self.id = id
         self.name = name
         self.tags1 = tags1
@@ -47,7 +46,6 @@ struct Listing: Identifiable, Codable {
         self.longDescription = longDescription
         self.location = location
         self.imageUrl = imageUrl
-        self.isBrizPick = isBrizPick
         self.cardState = cardState
     }
 }

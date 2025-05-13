@@ -107,6 +107,25 @@ struct ListingsScrollView: View {
                                     .font(.caption)
                                     .foregroundColor(.gray)
                                 
+                                // Card states (new and featured)
+                                if !viewModel.selectedCardStates.isEmpty {
+                                    ScrollView(.horizontal, showsIndicators: false) {
+                                        HStack {
+                                            ForEach(Array(viewModel.selectedCardStates), id: \.self) { cardState in
+                                                Text(cardState.uppercased())
+                                                    .font(.caption)
+                                                    .foregroundColor(.black)
+                                                    .padding(.horizontal, 8)
+                                                    .padding(.vertical, 4)
+                                                    .background(
+                                                        RoundedRectangle(cornerRadius: 8)
+                                                            .fill(cardState == "new" ? Color.green.opacity(0.3) : Color.blue.opacity(0.3))
+                                                    )
+                                            }
+                                        }
+                                    }
+                                }
+                                
                                 // Primary tags (cream)
                                 if !viewModel.selectedTags1.isEmpty {
                                     ScrollView(.horizontal, showsIndicators: false) {
