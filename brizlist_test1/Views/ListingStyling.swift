@@ -9,10 +9,56 @@ import Foundation
 import SwiftUI
 
 struct ListingStyling {
+    // MARK: - Colors
     
-
+    // Dark gray color for filter buttons
+    static let darkGray = Color(red: 0.3, green: 0.3, blue: 0.3)
     
+    // MARK: - Filter Sheet Styling
     
+    // Close button (X in a circle)
+    static func closeButton(action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            ZStack {
+                Circle()
+                    .fill(Color(.systemGray5))
+                    .frame(width: 32, height: 32)
+                
+                Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(darkGray)
+            }
+        }
+    }
+    
+    // Reset button (arrow.counterclockwise in a circle)
+    static func resetButton(action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            ZStack {
+                Circle()
+                    .fill(Color(.systemGray5))
+                    .frame(width: 32, height: 32)
+                
+                Image(systemName: "arrow.counterclockwise")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(darkGray)
+            }
+        }
+    }
+    
+    // Apply button style
+    static func applyButton(title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .fontWeight(.medium)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(Color.blue)
+                .foregroundColor(.white)
+                .cornerRadius(10)
+        }
+        .padding(.horizontal)
+    }
 
     // MARK: - Location Styling
     
@@ -154,5 +200,4 @@ struct ListingStyling {
             }
         }
     }
-
 }

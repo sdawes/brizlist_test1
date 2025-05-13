@@ -21,15 +21,14 @@ struct HeaderView: View {
                     .font(.headline)
                     .fontWeight(.bold)
 
-                if viewModel.hasActiveFilters || viewModel.hasTags1 {
+                if viewModel.isFiltering {
                     HStack(spacing: 4) {
                         Image(systemName: "line.3.horizontal.decrease.circle.fill")
                             .foregroundColor(.blue)
                             .font(.caption)
                         
-                        let count = viewModel.activeFilterValues.values.filter { $0 }.count 
-                                  + (viewModel.selectedTags1.isEmpty ? 0 : 1)
-                        Text("\(count)")
+                        // Simply show the count of selected tags1
+                        Text("\(viewModel.selectedTags1.count)")
                             .font(.caption)
                             .foregroundColor(.blue)
                     }

@@ -155,7 +155,20 @@ struct ListingCardView: View {
                     }
                     .padding(.trailing, 140) // Keep space for the image
                     
-                    // Description (if available)
+                    // Footer with location (now comes first)
+                    HStack(spacing: 4) {
+                        Image(systemName: "location.circle.fill")
+                            .font(.caption2)
+                        
+                        Text(listing.location.uppercased())
+                            .font(.caption2)
+                        
+                        Spacer()
+                    }
+                    .foregroundColor(.black)
+                    .padding(.top, 8)
+                    
+                    // Description (if available) now comes after location
                     if !listing.shortDescription.isEmpty {
                         Text(listing.shortDescription)
                             .font(.caption)
@@ -168,21 +181,9 @@ struct ListingCardView: View {
                     }
                     
                     Spacer(minLength: 16) // Ensure minimum spacing
-
-                    // Footer with location
-                    HStack(spacing: 4) {
-                        Image(systemName: "location.circle.fill")
-                            .font(.caption2)
-                        
-                        Text(listing.location.uppercased())
-                            .font(.caption2)
-                        
-                        Spacer()
-                    }
-                    .foregroundColor(.black)
                     
                     Spacer()
-                    .frame(height: 16) // Space below the location
+                    .frame(height: 16) // Space at the bottom
                 }
                 .padding(.horizontal, 12)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
@@ -237,7 +238,20 @@ struct ListingCardView: View {
                         Spacer()
                     }
                     
-                    // Description section
+                    // Footer with location (now comes first)
+                    HStack(spacing: 4) {
+                        Image(systemName: "location.circle.fill")
+                            .font(.caption2)
+                        
+                        Text(listing.location.uppercased())
+                            .font(.caption2)
+                        
+                        Spacer()
+                    }
+                    .foregroundColor(.black)
+                    .padding(.top, 8)
+                    
+                    // Description section (now comes after location)
                     if !listing.shortDescription.isEmpty {
                         Text(listing.shortDescription)
                             .font(.caption)
@@ -249,22 +263,10 @@ struct ListingCardView: View {
                             .padding(.top, 8)
                     }
                     
-                    Spacer(minLength: 8) // Reduced spacing between description and location
-                    
-                    // Footer with location
-                    HStack(spacing: 4) {
-                        Image(systemName: "location.circle.fill")
-                            .font(.caption2)
-                        
-                        Text(listing.location.uppercased())
-                            .font(.caption2)
-                        
-                        Spacer()
-                    }
-                    .foregroundColor(.black)
+                    Spacer(minLength: 8) // Ensure minimum spacing at bottom
                     
                     Spacer()
-                    .frame(height: 12) // Reduced space below the location
+                    .frame(height: 12) // Reduced space at bottom
                 }
                 .padding(.horizontal, 12)
             }

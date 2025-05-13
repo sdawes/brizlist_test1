@@ -100,27 +100,74 @@ struct ListingsScrollView: View {
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 32)
                         
-                        if !viewModel.selectedTags1.isEmpty {
-                            VStack(alignment: .leading, spacing: 4) {
+                        // Show selected filters
+                        if viewModel.hasTagFilters {
+                            VStack(alignment: .leading, spacing: 8) {
                                 Text("Selected filters:")
                                     .font(.caption)
                                     .foregroundColor(.gray)
                                 
-                                HStack {
-                                    ForEach(Array(viewModel.selectedTags1), id: \.self) { filter in
-                                        Text(filter.capitalized)
-                                            .font(.caption)
-                                            .foregroundColor(.white)
-                                            .padding(.horizontal, 8)
-                                            .padding(.vertical, 4)
-                                            .background(
-                                                RoundedRectangle(cornerRadius: 8)
-                                                    .fill(Color.blue.opacity(0.7))
-                                            )
+                                // Primary tags (cream)
+                                if !viewModel.selectedTags1.isEmpty {
+                                    ScrollView(.horizontal, showsIndicators: false) {
+                                        HStack {
+                                            ForEach(Array(viewModel.selectedTags1), id: \.self) { tag in
+                                                Text(tag.capitalized)
+                                                    .font(.caption)
+                                                    .foregroundColor(.black)
+                                                    .padding(.horizontal, 8)
+                                                    .padding(.vertical, 4)
+                                                    .background(
+                                                        RoundedRectangle(cornerRadius: 8)
+                                                            .fill(Color(red: 0.93, green: 0.87, blue: 0.76))
+                                                    )
+                                            }
+                                        }
                                     }
                                 }
+                                
+                                /* Future implementation for tags2 and tags3
+                                // Secondary tags (grey)
+                                if !viewModel.selectedTags2.isEmpty {
+                                    ScrollView(.horizontal, showsIndicators: false) {
+                                        HStack {
+                                            ForEach(Array(viewModel.selectedTags2), id: \.self) { tag in
+                                                Text(tag.capitalized)
+                                                    .font(.caption)
+                                                    .foregroundColor(.black)
+                                                    .padding(.horizontal, 8)
+                                                    .padding(.vertical, 4)
+                                                    .background(
+                                                        RoundedRectangle(cornerRadius: 8)
+                                                            .fill(Color.gray.opacity(0.2))
+                                                    )
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                // Tertiary tags (purple)
+                                if !viewModel.selectedTags3.isEmpty {
+                                    ScrollView(.horizontal, showsIndicators: false) {
+                                        HStack {
+                                            ForEach(Array(viewModel.selectedTags3), id: \.self) { tag in
+                                                Text(tag.capitalized)
+                                                    .font(.caption)
+                                                    .foregroundColor(.black)
+                                                    .padding(.horizontal, 8)
+                                                    .padding(.vertical, 4)
+                                                    .background(
+                                                        RoundedRectangle(cornerRadius: 8)
+                                                            .fill(Color.purple.opacity(0.15))
+                                                    )
+                                            }
+                                        }
+                                    }
+                                }
+                                */
                             }
-                            .padding(.top, 4)
+                            .padding(.top, 8)
+                            .padding(.horizontal)
                         }
                         
                         Button("Adjust Filters") {
