@@ -15,7 +15,6 @@ struct FilterSheetView: View {
     
     // Track selected tags for each category (local state)
     @State private var selectedTags1: Set<String> = []
-    // Keep these for future expansion
     @State private var selectedTags2: Set<String> = []
     @State private var selectedTags3: Set<String> = []
     
@@ -23,10 +22,22 @@ struct FilterSheetView: View {
     private func applyFilters() {
         // Update the viewModel's selected tags
         viewModel.clearTags1()
+        viewModel.clearTags2()
+        viewModel.clearTags3()
         
-        // Apply selected tags
+        // Apply selected tags1
         for tag in selectedTags1 {
             viewModel.selectTag1(tag)
+        }
+        
+        // Apply selected tags2
+        for tag in selectedTags2 {
+            viewModel.selectTag2(tag)
+        }
+        
+        // Apply selected tags3
+        for tag in selectedTags3 {
+            viewModel.selectTag3(tag)
         }
         
         // Fetch filtered listings but don't dismiss the sheet yet
@@ -45,7 +56,7 @@ struct FilterSheetView: View {
         }
     }
     
-    // Get all available tags1 (for first section)
+    // Get all available tags1 (primary tags)
     private var allAvailableTags1: [String] {
         let tags1 = viewModel.getAllUniqueTags1()
         let cachedTags1 = viewModel.getCachedTags1()
@@ -54,9 +65,7 @@ struct FilterSheetView: View {
         return Array(Set(tags1 + cachedTags1)).sorted()
     }
     
-    // For future expansion - commented out for now
-    /*
-    // Get all available tags2 (for second section)
+    // Get all available tags2 (secondary tags)
     private var allAvailableTags2: [String] {
         let tags2 = viewModel.getAllUniqueTags2()
         let cachedTags2 = viewModel.getCachedTags2()
@@ -65,7 +74,7 @@ struct FilterSheetView: View {
         return Array(Set(tags2 + cachedTags2)).sorted()
     }
     
-    // Get all available tags3 (for third section)
+    // Get all available tags3 (tertiary tags)
     private var allAvailableTags3: [String] {
         let tags3 = viewModel.getAllUniqueTags3()
         let cachedTags3 = viewModel.getCachedTags3()
@@ -73,23 +82,44 @@ struct FilterSheetView: View {
         // Return both current tags3 and those from cache
         return Array(Set(tags3 + cachedTags3)).sorted()
     }
-    */
     
-    // Toggle selection of a tag (only changes local state, doesn't apply filter yet)
-    private func toggleTag(_ tag: String, in tagSet: inout Set<String>) {
-        if tagSet.contains(tag) {
-            tagSet.remove(tag)
+    // Toggle selection of a tag1 (only changes local state, doesn't apply filter yet)
+    private func toggleTag1(_ tag: String) {
+        if selectedTags1.contains(tag) {
+            selectedTags1.remove(tag)
         } else {
-            tagSet.insert(tag)
+            selectedTags1.insert(tag)
         }
-        // No longer applying filters immediately
+        // Hide any previous warning when changing selection
+        showNoResultsWarning = false
+    }
+    
+    // Toggle selection of a tag2 (only changes local state, doesn't apply filter yet)
+    private func toggleTag2(_ tag: String) {
+        if selectedTags2.contains(tag) {
+            selectedTags2.remove(tag)
+        } else {
+            selectedTags2.insert(tag)
+        }
+        // Hide any previous warning when changing selection
+        showNoResultsWarning = false
+    }
+    
+    // Toggle selection of a tag3 (only changes local state, doesn't apply filter yet)
+    private func toggleTag3(_ tag: String) {
+        if selectedTags3.contains(tag) {
+            selectedTags3.remove(tag)
+        } else {
+            selectedTags3.insert(tag)
+        }
+        // Hide any previous warning when changing selection
+        showNoResultsWarning = false
     }
     
     // Reset all filters
     private func resetAllFilters() {
         // Clear tag selections in local state
         selectedTags1.removeAll()
-        // Keep for future expansion
         selectedTags2.removeAll()
         selectedTags3.removeAll()
         
@@ -128,87 +158,139 @@ struct FilterSheetView: View {
                 }
                 
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-                        // Tags1 Section - Primary tags (cream)
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("Filter by tag")
-                                .font(.headline)
-                                .padding(.horizontal)
-                            
-                            if allAvailableTags1.isEmpty {
-                                Text("No tags available")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                    .padding(.horizontal)
-                            } else {
-                                FlowLayout(spacing: 8) {
-                                    ForEach(allAvailableTags1, id: \.self) { tag in
-                                        // Use the same tag pill style but with tap gesture
-                                        Button(action: {
-                                            toggleTag(tag, in: &selectedTags1)
-                                            // Hide any previous warning when changing selection
-                                            showNoResultsWarning = false
-                                        }) {
-                                            Text(tag.uppercased())
-                                                .font(.system(size: 12))
-                                                .fontWeight(.medium)
-                                                .foregroundColor(.black)
-                                                .padding(.vertical, 6)
-                                                .padding(.horizontal, 10)
-                                                .background(
-                                                    Rectangle()
-                                                        .fill(selectedTags1.contains(tag) 
-                                                            ? Color(red: 0.93, green: 0.87, blue: 0.76) // Selected: Original cream color
-                                                            : Color(red: 0.93, green: 0.87, blue: 0.76).opacity(0.4)) // Unselected: Faded
-                                                )
-                                        }
-                                        .buttonStyle(PlainButtonStyle())
-                                    }
-                                }
-                                .padding(.horizontal)
-                            }
-                        }
+                    VStack(alignment: .leading, spacing: 16) {
+                        // Smaller instructional text instead of a heading
+                        Text("Click on the tags you would like to filter by")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal)
+                            .padding(.top, 4)
                         
-                        /* Commented out for now - will implement in future
-                        // Tags2 Section - Secondary tags (grey)
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("Secondary Tags")
-                                .font(.headline)
+                        if allAvailableTags1.isEmpty && allAvailableTags2.isEmpty && allAvailableTags3.isEmpty {
+                            Text("No tags available")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
                                 .padding(.horizontal)
-                            
-                            if allAvailableTags2.isEmpty {
-                                Text("No secondary tags available")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                    .padding(.horizontal)
-                            } else {
-                                FlowLayout(spacing: 8) {
-                                    ForEach(allAvailableTags2, id: \.self) { tag in
-                                        Button(action: {
-                                            toggleTag(tag, in: &selectedTags2)
-                                        }) {
-                                            Text(tag.uppercased())
-                                                .font(.system(size: 12))
-                                                .fontWeight(.medium)
-                                                .foregroundColor(.black)
-                                                .padding(.vertical, 6)
-                                                .padding(.horizontal, 10)
-                                                .background(
-                                                    Rectangle()
-                                                        .fill(selectedTags2.contains(tag) 
-                                                            ? Color.gray.opacity(0.2) // Selected: Original grey color
-                                                            : Color.gray.opacity(0.1)) // Unselected: Faded
-                                                )
+                        } else {
+                            // Section 1: Primary tags (cream colored)
+                            if !allAvailableTags1.isEmpty {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Divider()
+                                        .padding(.horizontal)
+                                    
+                                    // Add more vertical space (12pts) after the divider
+                                    Spacer()
+                                        .frame(height: 12)
+                                    
+                                    FlowLayout(spacing: 6) {
+                                        ForEach(allAvailableTags1, id: \.self) { tag in
+                                            Button(action: {
+                                                toggleTag1(tag)
+                                            }) {
+                                                Text(tag.uppercased())
+                                                    .font(.system(size: 12))
+                                                    .fontWeight(.medium)
+                                                    .foregroundColor(.black)
+                                                    .padding(.vertical, 6)
+                                                    .padding(.horizontal, 10)
+                                                    .background(
+                                                        Rectangle()
+                                                            .fill(Color(red: 0.93, green: 0.87, blue: 0.76))
+                                                            .overlay(
+                                                                Rectangle()
+                                                                    .stroke(selectedTags1.contains(tag) ? 
+                                                                        Color(red: 0.8, green: 0.2, blue: 0.2) : Color.clear,
+                                                                        lineWidth: 1.5)
+                                                            )
+                                                    )
+                                            }
+                                            .buttonStyle(PlainButtonStyle())
                                         }
-                                        .buttonStyle(PlainButtonStyle())
                                     }
+                                    .padding(.horizontal)
                                 }
-                                .padding(.horizontal)
+                            }
+                            
+                            // Section 2: Secondary tags (grey colored)
+                            if !allAvailableTags2.isEmpty {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Divider()
+                                        .padding(.horizontal)
+                                    
+                                    // Add more vertical space (12pts) after the divider
+                                    Spacer()
+                                        .frame(height: 12)
+                                    
+                                    FlowLayout(spacing: 6) {
+                                        ForEach(allAvailableTags2, id: \.self) { tag in
+                                            Button(action: {
+                                                toggleTag2(tag)
+                                            }) {
+                                                Text(tag.uppercased())
+                                                    .font(.system(size: 12))
+                                                    .fontWeight(.medium)
+                                                    .foregroundColor(.black)
+                                                    .padding(.vertical, 6)
+                                                    .padding(.horizontal, 10)
+                                                    .background(
+                                                        Rectangle()
+                                                            .fill(Color.gray.opacity(0.2))
+                                                            .overlay(
+                                                                Rectangle()
+                                                                    .stroke(selectedTags2.contains(tag) ? 
+                                                                        Color(red: 0.8, green: 0.2, blue: 0.2) : Color.clear,
+                                                                        lineWidth: 1.5)
+                                                            )
+                                                    )
+                                            }
+                                            .buttonStyle(PlainButtonStyle())
+                                        }
+                                    }
+                                    .padding(.horizontal)
+                                }
+                            }
+                            
+                            // Section 3: Tertiary tags (purple colored)
+                            if !allAvailableTags3.isEmpty {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Divider()
+                                        .padding(.horizontal)
+                                    
+                                    // Add more vertical space (12pts) after the divider
+                                    Spacer()
+                                        .frame(height: 12)
+                                    
+                                    FlowLayout(spacing: 6) {
+                                        ForEach(allAvailableTags3, id: \.self) { tag in
+                                            Button(action: {
+                                                toggleTag3(tag)
+                                            }) {
+                                                Text(tag.uppercased())
+                                                    .font(.system(size: 12))
+                                                    .fontWeight(.medium)
+                                                    .foregroundColor(.black)
+                                                    .padding(.vertical, 6)
+                                                    .padding(.horizontal, 10)
+                                                    .background(
+                                                        Rectangle()
+                                                            .fill(Color.purple.opacity(0.15))
+                                                            .overlay(
+                                                                Rectangle()
+                                                                    .stroke(selectedTags3.contains(tag) ? 
+                                                                        Color(red: 0.8, green: 0.2, blue: 0.2) : Color.clear,
+                                                                        lineWidth: 1.5)
+                                                            )
+                                                    )
+                                            }
+                                            .buttonStyle(PlainButtonStyle())
+                                        }
+                                    }
+                                    .padding(.horizontal)
+                                }
                             }
                         }
-                        */
                     }
-                    .padding(.vertical, 20)
+                    .padding(.vertical, 16)
                 }
                 
                 // Apply button at the bottom using ListingStyling
@@ -219,22 +301,35 @@ struct FilterSheetView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    ListingStyling.resetButton {
+                    // Replace icon with small text "Reset"
+                    Button("Reset") {
                         resetAllFilters()
                     }
+                    .font(.caption)
+                    .foregroundColor(.blue)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    ListingStyling.closeButton {
+                    // Smaller X button
+                    Button(action: {
                         dismiss()
+                    }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 12))
+                            .foregroundColor(.gray)
+                            .padding(6)
+                            .background(
+                                Circle()
+                                    .fill(Color(.systemGray5))
+                                    .frame(width: 24, height: 24)
+                            )
                     }
                 }
             }
             .onAppear {
                 // Initialize selected tags from viewModel to show current filter state
                 selectedTags1 = Set(viewModel.selectedTags1)
-                // Keep for future expansion
-                selectedTags2 = viewModel.selectedTags2
-                selectedTags3 = viewModel.selectedTags3
+                selectedTags2 = Set(viewModel.selectedTags2)
+                selectedTags3 = Set(viewModel.selectedTags3)
                 
                 // Reset warning state when view appears
                 showNoResultsWarning = false

@@ -126,7 +126,6 @@ struct ListingsScrollView: View {
                                     }
                                 }
                                 
-                                /* Future implementation for tags2 and tags3
                                 // Secondary tags (grey)
                                 if !viewModel.selectedTags2.isEmpty {
                                     ScrollView(.horizontal, showsIndicators: false) {
@@ -164,7 +163,6 @@ struct ListingsScrollView: View {
                                         }
                                     }
                                 }
-                                */
                             }
                             .padding(.top, 8)
                             .padding(.horizontal)

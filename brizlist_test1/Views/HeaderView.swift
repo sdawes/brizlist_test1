@@ -12,6 +12,11 @@ struct HeaderView: View {
     @ObservedObject var viewModel: ListingsViewModel
     var onFilterTap: () -> Void
     var onAboutTap: () -> Void
+    
+    // Compute the total number of active filters across all tag types
+    private var totalActiveFilters: Int {
+        return viewModel.selectedTags1.count + viewModel.selectedTags2.count + viewModel.selectedTags3.count
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -27,8 +32,8 @@ struct HeaderView: View {
                             .foregroundColor(.blue)
                             .font(.caption)
                         
-                        // Simply show the count of selected tags1
-                        Text("\(viewModel.selectedTags1.count)")
+                        // Show the total count of all selected tags
+                        Text("\(totalActiveFilters)")
                             .font(.caption)
                             .foregroundColor(.blue)
                     }
