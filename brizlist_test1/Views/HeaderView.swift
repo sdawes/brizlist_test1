@@ -17,6 +17,15 @@ struct HeaderView: View {
     private var totalActiveFilters: Int {
         return viewModel.selectedTags1.count + viewModel.selectedTags2.count + viewModel.selectedTags3.count + viewModel.selectedCardStates.count
     }
+    
+    // Determine filter button text based on active filters
+    private var filterButtonText: String {
+        if totalActiveFilters > 0 {
+            return "Filtered (\(totalActiveFilters))"
+        } else {
+            return "Filter"
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -26,28 +35,25 @@ struct HeaderView: View {
                     .font(.headline)
                     .fontWeight(.bold)
 
-                if viewModel.isFiltering {
-                    HStack(spacing: 4) {
-                        Image(systemName: "line.3.horizontal.decrease.circle.fill")
-                            .foregroundColor(.blue)
-                            .font(.caption)
-                        
-                        // Show the total count of all selected tags
-                        Text("\(totalActiveFilters)")
-                            .font(.caption)
-                            .foregroundColor(.blue)
-                    }
-                }
-
                 Spacer()
 
-                // Filter button
+                // Filter button with dynamic text
                 Button(action: {
                     onFilterTap()
                 }) {
-                    Image(systemName: "line.3.horizontal.decrease.circle")
-                        .font(.headline)
-                        .foregroundColor(.black)
+                    Text(filterButtonText)
+                        .font(.subheadline)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 15)
+                                .fill(totalActiveFilters > 0 ? Color.blue.opacity(0.1) : Color.clear)
+                        )
+                        .foregroundColor(totalActiveFilters > 0 ? .blue : .primary)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 15)
+                                .stroke(totalActiveFilters > 0 ? Color.blue.opacity(0.2) : Color.gray.opacity(0.3), lineWidth: 1)
+                        )
                 }
 
                 // More info about brizlist

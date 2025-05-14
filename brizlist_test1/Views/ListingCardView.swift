@@ -306,8 +306,9 @@ struct ListingCardView: View {
             showingDetailView = true
         }) {
             // Choose card design based on cardState
-            // Use featured design for both featured and new listings
-            if isFeatured || isNewListing {
+            // Use featured design only for featured listings
+            // Use standard design for both new and default listings
+            if isFeatured {
                 featuredCardDesign()
             } else {
                 standardCardDesign()

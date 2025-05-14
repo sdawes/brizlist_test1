@@ -394,6 +394,14 @@ class ListingsViewModel: ObservableObject {
         }
     }
     
+    /// Sort listings alphabetically by name
+    private func sortListingsByName(_ listings: [Listing]) -> [Listing] {
+        return listings.sorted { first, second in
+            // Sort alphabetically by name
+            return first.name < second.name
+        }
+    }
+    
     /// Process query results from Firestore
     private func processQueryResults(snapshot: QuerySnapshot?, error: Error?, isInitialFetch: Bool) {
         if let error = error {
@@ -535,8 +543,8 @@ class ListingsViewModel: ObservableObject {
             cacheAllTagsAndFilters(from: newListings)
         }
         
-        // Sort listings to prioritize new listings at the top, then alphabetically
-        let sortedListings = sortListingsWithNewAtTop(newListings)
+        // Sort listings alphabetically (no longer prioritize new listings)
+        let sortedListings = sortListingsByName(newListings)
         
         // We still use separateFeaturedListings for UI reference but we won't sort by featured status
         let (featured, _) = separateFeaturedListings(sortedListings)
@@ -561,7 +569,7 @@ class ListingsViewModel: ObservableObject {
                     
                     // Re-sort the combined list if needed
                     if isInitialFetch == false {
-                        self.listings = self.sortListingsWithNewAtTop(self.listings)
+                        self.listings = self.sortListingsByName(self.listings)
                     }
                     
                     // Found results, so reset the no results flag
@@ -642,20 +650,5 @@ class ListingsViewModel: ObservableObject {
         self.cachedTags2 = Array(tags2)
         self.cachedTags3 = Array(tags3)
         self.cachedTags = Array(tags)
-    }
-    
-    /// Sort listings with new listings at the top, then alphabetically
-    private func sortListingsWithNewAtTop(_ listings: [Listing]) -> [Listing] {
-        return listings.sorted { first, second in
-            // First priority: New listings at the top
-            if first.isNew && !second.isNew {
-                return true
-            } else if !first.isNew && second.isNew {
-                return false
-            }
-            
-            // Everything else sorted alphabetically by name
-            return first.name < second.name
-        }
     }
 }

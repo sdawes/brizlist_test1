@@ -167,7 +167,7 @@ struct FilterSheetView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 // No results warning banner in standard iOS style
                 if showNoResultsWarning {
@@ -195,19 +195,13 @@ struct FilterSheetView: View {
                 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        // Smaller instructional text instead of a heading
-                        Text("Click on the tags you would like to filter by")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .padding(.horizontal)
-                            .padding(.top, 4)
+                        // Removed instructional text
                         
                         // Card state filter section (NEW and FEATURED)
                         VStack(alignment: .leading, spacing: 6) {
-                            Divider()
-                                .padding(.horizontal)
+                            // Removed top Divider
                             
-                            // Add more vertical space after the divider
+                            // Adding top padding instead of spacer
                             Spacer()
                                 .frame(height: 12)
                             
@@ -374,29 +368,41 @@ struct FilterSheetView: View {
             }
             .navigationTitle("Filters")
             .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(true)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    // Replace icon with small text "Reset"
-                    Button("Reset") {
-                        resetAllFilters()
-                    }
-                    .font(.caption)
-                    .foregroundColor(.blue)
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    // Smaller X button
+                    // X button moved to the left, with light blue-gray color
                     Button(action: {
                         dismiss()
                     }) {
                         Image(systemName: "xmark")
-                            .font(.system(size: 12))
-                            .foregroundColor(.gray)
+                            .font(.system(size: 14))
+                            .foregroundColor(Color.blue.opacity(0.4))
                             .padding(6)
                             .background(
                                 Circle()
                                     .fill(Color(.systemGray5))
-                                    .frame(width: 24, height: 24)
+                                    .frame(width: 28, height: 28)
                             )
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    // "Clear Filters" button replaced with custom diagonal line
+                    Button(action: {
+                        resetAllFilters()
+                    }) {
+                        ZStack {
+                            Circle()
+                                .fill(Color(.systemGray5))
+                                .frame(width: 28, height: 28)
+                            
+                            // Simple diagonal line
+                            Rectangle()
+                                .fill(Color.blue.opacity(0.4))
+                                .frame(width: 16, height: 1.5)
+                                .rotationEffect(Angle(degrees: -45))
+                        }
+                        .padding(6)
                     }
                 }
             }

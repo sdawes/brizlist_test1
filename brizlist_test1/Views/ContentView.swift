@@ -48,7 +48,7 @@ struct ContentView: View {
         .sheet(isPresented: $showingFilterSheet, content: {
             FilterSheetView(viewModel: viewModel)
             .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
+            .presentationDragIndicator(.hidden)
         })
         .sheet(isPresented: $showingAboutSheet, content: {
             AboutSheetView()
