@@ -11,7 +11,6 @@ import SwiftUI
 struct HeaderView: View {
     @ObservedObject var viewModel: ListingsViewModel
     var onFilterTap: () -> Void
-    var onAboutTap: () -> Void
     
     // Compute the total number of active filters across all tag types
     private var totalActiveFilters: Int {
@@ -55,24 +54,12 @@ struct HeaderView: View {
                                 .stroke(totalActiveFilters > 0 ? Color.blue.opacity(0.2) : Color.gray.opacity(0.3), lineWidth: 1)
                         )
                 }
-
-                // More info about brizlist
-                Button(action: {
-                    onAboutTap()
-                }) {
-                    Image(systemName: "questionmark.circle")
-                        .font(.headline)
-                        .foregroundColor(.black)
-                }
             }
             .padding(.horizontal)
             .padding(.vertical, 12)
-            .background(Color(.systemGray6))
+            .background(Color(.systemGray6))  // Fixed light gray background
 
-            // Bottom border line
-            Rectangle()
-                .fill(Color.gray.opacity(0.3))
-                .frame(height: 1)
+            // Bottom border line removed
         }
     }
 }
@@ -80,7 +67,6 @@ struct HeaderView: View {
 #Preview {
     HeaderView(
         viewModel: ListingsViewModel(),
-        onFilterTap: {},
-        onAboutTap: {}
+        onFilterTap: {}
     )
 }

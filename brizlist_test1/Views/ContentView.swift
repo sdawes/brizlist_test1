@@ -11,21 +11,26 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var viewModel = ListingsViewModel()
     @State private var showingFilterSheet = false
-    @State private var showingAboutSheet = false
     
     var body: some View {
         ZStack {
-            // System grey color to match the header
-            Color(.systemGray6)  // This is the same color used in HeaderView
-                .ignoresSafeArea()
+            // Light gray gradient background that matches the header color
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color(.systemGray6),  // Match header's light gray at top
+                    Color(.systemGray6).opacity(0.97)   // Very slightly faded at bottom for subtle gradient
+                ]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
 
             // Main content
             VStack(spacing: 0) {
-                // Header
+                // Header with fixed light gray background (defined in HeaderView)
                 HeaderView(
                     viewModel: viewModel,
-                    onFilterTap: { showingFilterSheet = true },
-                    onAboutTap: { showingAboutSheet = true }
+                    onFilterTap: { showingFilterSheet = true }
                 )
                 
                 // Main scrolling content
@@ -49,11 +54,6 @@ struct ContentView: View {
             FilterSheetView(viewModel: viewModel)
             .presentationDetents([.large])
             .presentationDragIndicator(.hidden)
-        })
-        .sheet(isPresented: $showingAboutSheet, content: {
-            AboutSheetView()
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
         })
     }
 }
