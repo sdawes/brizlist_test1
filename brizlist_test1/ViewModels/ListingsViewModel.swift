@@ -54,10 +54,11 @@ class ListingsViewModel: ObservableObject {
     
     /// Fetch listings from Firebase with current filters applied
     public func fetchListings() {
-        resetPaginationState()
+        // Don't reset all data immediately - this causes the flash
+        hasMoreListings = true
         
         // Check if we have any tag filters selected
-        if selectedTags1.isEmpty && selectedTags2.isEmpty && selectedTags3.isEmpty {
+        if selectedTags1.isEmpty && selectedTags2.isEmpty && selectedTags3.isEmpty && selectedCardStates.isEmpty {
             // No filters, fetch all listings
             fetchAllListings()
         } else {
@@ -328,8 +329,6 @@ class ListingsViewModel: ObservableObject {
     
     /// Reset pagination state for fresh listing fetch
     private func resetPaginationState() {
-        listings = []
-        featuredListings = []
         lastDocument = nil
         hasMoreListings = true
     }
@@ -384,7 +383,14 @@ class ListingsViewModel: ObservableObject {
             guard let self = self else { return }
             defer { self.isLoadingMore = false }
             
-            self.processQueryResults(snapshot: snapshot, error: error, isInitialFetch: isInitialFetch)
+            if isInitialFetch {
+                // Only reset the data for initial fetch, and only after we have new data
+                // This prevents the screen from flashing empty content
+                self.processQueryResults(snapshot: snapshot, error: error, isInitialFetch: isInitialFetch)
+            } else {
+                // For pagination, just append to existing data
+                self.processQueryResults(snapshot: snapshot, error: error, isInitialFetch: false)
+            }
         }
     }
     
@@ -401,11 +407,16 @@ class ListingsViewModel: ObservableObject {
         guard let documents = snapshot?.documents else {
             hasMoreListings = false
             if isInitialFetch {
-                listings = []
-                featuredListings = []
-                
-                // Set the noResultsFromFiltering flag if we have filters but no results
-                noResultsFromFiltering = hasActiveFilters
+                // Use animation for smoother transition
+                DispatchQueue.main.async {
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        self.listings = []
+                        self.featuredListings = []
+                        
+                        // Set the noResultsFromFiltering flag if we have filters but no results
+                        self.noResultsFromFiltering = hasActiveFilters
+                    }
+                }
             }
             return
         }
@@ -497,11 +508,16 @@ class ListingsViewModel: ObservableObject {
         if filteredDocuments.isEmpty {
             hasMoreListings = false
             if isInitialFetch {
-                listings = []
-                featuredListings = []
-                
-                // Set the noResultsFromFiltering flag
-                noResultsFromFiltering = hasActiveFilters
+                // Use animation for smoother transition
+                DispatchQueue.main.async {
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        self.listings = []
+                        self.featuredListings = []
+                        
+                        // Set the noResultsFromFiltering flag
+                        self.noResultsFromFiltering = hasActiveFilters
+                    }
+                }
             }
             return
         }
@@ -526,15 +542,31 @@ class ListingsViewModel: ObservableObject {
         let (featured, _) = separateFeaturedListings(sortedListings)
         
         if isInitialFetch {
-            featuredListings = featured
-            listings = sortedListings  // Use all sorted listings
+            // Apply results with animation for a smoother transition
+            DispatchQueue.main.async {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    self.featuredListings = featured
+                    self.listings = sortedListings  // Use all sorted listings
+                    
+                    // Found results, so reset the no results flag
+                    self.noResultsFromFiltering = false
+                }
+            }
         } else {
-            featuredListings.append(contentsOf: featured)
-            listings.append(contentsOf: sortedListings)  // Append the new sorted listings
-            
-            // Re-sort the combined list
-            if isInitialFetch == false {
-                listings = sortListingsWithNewAtTop(listings)
+            // For pagination, just append to existing data
+            DispatchQueue.main.async {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    self.featuredListings.append(contentsOf: featured)
+                    self.listings.append(contentsOf: sortedListings)  // Append the new sorted listings
+                    
+                    // Re-sort the combined list if needed
+                    if isInitialFetch == false {
+                        self.listings = self.sortListingsWithNewAtTop(self.listings)
+                    }
+                    
+                    // Found results, so reset the no results flag
+                    self.noResultsFromFiltering = false
+                }
             }
         }
     }
