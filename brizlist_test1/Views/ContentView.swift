@@ -14,11 +14,11 @@ struct ContentView: View {
     
     var body: some View {
         ZStack {
-            // Light gray gradient background that matches the header color
+            // Very light blue-gray gradient background
             LinearGradient(
                 gradient: Gradient(colors: [
-                    Color(.systemGray6),  // Match header's light gray at top
-                    Color(.systemGray6).opacity(0.97)   // Very slightly faded at bottom for subtle gradient
+                    Color(red: 0.94, green: 0.95, blue: 0.98),  // Very light blue-gray at top
+                    Color(red: 0.91, green: 0.93, blue: 0.96)   // Slightly darker blue-gray at bottom for more visible gradient
                 ]),
                 startPoint: .top,
                 endPoint: .bottom

@@ -57,7 +57,7 @@ struct HeaderView: View {
             }
             .padding(.horizontal)
             .padding(.vertical, 12)
-            .background(Color(.systemGray6))  // Fixed light gray background
+            .background(Color(.systemGray6))  // Slightly darker gray background for more contrast
 
             // Bottom border line removed
         }
