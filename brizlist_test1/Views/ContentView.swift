@@ -12,6 +12,7 @@ struct ContentView: View {
     @StateObject private var viewModel = ListingsViewModel()
     @State private var showingFilterSheet = false
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @State private var deviceOrientation = UIDevice.current.orientation
     
     var body: some View {
         ZStack {
@@ -38,8 +39,12 @@ struct ContentView: View {
                 ListingsScrollView(
                     viewModel: viewModel,
                     onFilterTap: { showingFilterSheet = true },
-                    sizeClass: sizeClass
+                    sizeClass: sizeClass,
+                    deviceOrientation: deviceOrientation
                 )
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
+                self.deviceOrientation = UIDevice.current.orientation
             }
         }
         .onAppear {
@@ -65,6 +70,7 @@ struct ListingsScrollView: View {
     @ObservedObject var viewModel: ListingsViewModel
     var onFilterTap: () -> Void
     let sizeClass: UserInterfaceSizeClass?
+    let deviceOrientation: UIDeviceOrientation
     
     var body: some View {
         ScrollView {
@@ -78,8 +84,8 @@ struct ListingsScrollView: View {
                     // The unified ListingCardView automatically handles all card states
                     ListingCardView(listing: listing)
                         .padding(.horizontal)
-                        // Simplify ID to just use listing.id without orientation
-                        .id(listing.id)
+                        // Use both listing ID and orientation state to force refresh when orientation changes
+                        .id("\(listing.id)-\(deviceOrientation.isLandscape ? "landscape" : "portrait")")
                         .onAppear {
                             if listing.id == viewModel.listings.last?.id {
                                 viewModel.loadMoreListings()
@@ -219,8 +225,8 @@ struct ListingsScrollView: View {
                         .padding()
                 }
             }
-            // Use sizeClass for the ID instead of UIDevice.current.orientation
-            .id(sizeClass)
+            // Use both sizeClass and orientation for the ID
+            .id("scrollview-\(sizeClass == .regular ? "regular" : "compact")-\(deviceOrientation.isLandscape ? "landscape" : "portrait")")
             .padding(.top)
             .padding(.bottom, 80)
         }
