@@ -115,14 +115,13 @@ struct ListingCardView: View {
     // Status label for NEW listings
     private func newStatusLabel() -> some View {
         return Text("NEW")
-            .font(.system(size: 10))
-            .fontWeight(.medium)
+            .font(.system(size: 11, weight: .bold))
             .foregroundColor(.black)
-            .padding(.vertical, 2.5)
-            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .padding(.horizontal, 8)
             .background(
                 Rectangle()
-                    .fill(Color.green.opacity(0.3))
+                    .fill(Color(red: 0.1, green: 0.9, blue: 0.4))
             )
     }
     
@@ -174,7 +173,7 @@ struct ListingCardView: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.leading)
-                            .lineLimit(6) // Limit to 6 lines
+                            .lineLimit(3) // Limit to 3 lines
                             .fixedSize(horizontal: false, vertical: true)
                             .frame(width: UIScreen.main.bounds.width * 0.50, alignment: .leading)
                             .padding(.top, 8)
