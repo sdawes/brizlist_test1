@@ -11,14 +11,15 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var viewModel = ListingsViewModel()
     @State private var showingFilterSheet = false
+    @Environment(\.horizontalSizeClass) private var sizeClass
     
     var body: some View {
         ZStack {
             // Very light blue-gray gradient background
             LinearGradient(
                 gradient: Gradient(colors: [
-                    Color(red: 0.94, green: 0.95, blue: 0.98),  // Very light blue-gray at top
-                    Color(red: 0.91, green: 0.93, blue: 0.96)   // Slightly darker blue-gray at bottom for more visible gradient
+                    Color(red: 0.95, green: 0.96, blue: 0.99),  // Lighter and bluer at top
+                    Color(red: 0.92, green: 0.94, blue: 0.98)   // Slightly darker but still bluer at bottom
                 ]),
                 startPoint: .top,
                 endPoint: .bottom
@@ -36,7 +37,8 @@ struct ContentView: View {
                 // Main scrolling content
                 ListingsScrollView(
                     viewModel: viewModel,
-                    onFilterTap: { showingFilterSheet = true }
+                    onFilterTap: { showingFilterSheet = true },
+                    sizeClass: sizeClass
                 )
             }
         }
@@ -62,6 +64,7 @@ struct ContentView: View {
 struct ListingsScrollView: View {
     @ObservedObject var viewModel: ListingsViewModel
     var onFilterTap: () -> Void
+    let sizeClass: UserInterfaceSizeClass?
     
     var body: some View {
         ScrollView {
@@ -75,6 +78,8 @@ struct ListingsScrollView: View {
                     // The unified ListingCardView automatically handles all card states
                     ListingCardView(listing: listing)
                         .padding(.horizontal)
+                        // Simplify ID to just use listing.id without orientation
+                        .id(listing.id)
                         .onAppear {
                             if listing.id == viewModel.listings.last?.id {
                                 viewModel.loadMoreListings()
@@ -214,6 +219,8 @@ struct ListingsScrollView: View {
                         .padding()
                 }
             }
+            // Use sizeClass for the ID instead of UIDevice.current.orientation
+            .id(sizeClass)
             .padding(.top)
             .padding(.bottom, 80)
         }
