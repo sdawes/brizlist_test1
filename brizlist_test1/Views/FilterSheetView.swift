@@ -17,6 +17,7 @@ struct FilterSheetView: View {
     @State private var selectedTags1: Set<String> = []
     @State private var selectedTags2: Set<String> = []
     @State private var selectedTags3: Set<String> = []
+    @State private var selectedLocationTags: Set<String> = [] // Added for location filtering
     
     // Track selected card states for filtering
     @State private var selectedCardStates: Set<String> = []
@@ -31,6 +32,7 @@ struct FilterSheetView: View {
         viewModel.clearTags2()
         viewModel.clearTags3()
         viewModel.clearCardStates()
+        viewModel.clearLocationTags() // Clear location tags
         
         // Apply selected tags1
         for tag in selectedTags1 {
@@ -45,6 +47,11 @@ struct FilterSheetView: View {
         // Apply selected tags3
         for tag in selectedTags3 {
             viewModel.selectTag3(tag)
+        }
+        
+        // Apply selected location tags
+        for tag in selectedLocationTags {
+            viewModel.selectLocationTag(tag)
         }
         
         // Apply selected card states
@@ -95,6 +102,15 @@ struct FilterSheetView: View {
         return Array(Set(tags3 + cachedTags3)).sorted()
     }
     
+    // Get all available location tags
+    private var allAvailableLocationTags: [String] {
+        let locationTags = viewModel.getAllUniqueLocations()
+        let cachedLocationTags = viewModel.getCachedLocationTags()
+        
+        // Return both current location tags and those from cache
+        return Array(Set(locationTags + cachedLocationTags)).sorted()
+    }
+    
     // Toggle selection of a tag1 (only changes local state, doesn't apply filter yet)
     private func toggleTag1(_ tag: String) {
         if selectedTags1.contains(tag) {
@@ -139,6 +155,17 @@ struct FilterSheetView: View {
         showNoResultsWarning = false
     }
     
+    // Toggle selection of a location tag (only changes local state, doesn't apply filter yet)
+    private func toggleLocationTag(_ tag: String) {
+        if selectedLocationTags.contains(tag) {
+            selectedLocationTags.remove(tag)
+        } else {
+            selectedLocationTags.insert(tag)
+        }
+        // Hide any previous warning when changing selection
+        showNoResultsWarning = false
+    }
+    
     // Get color for card state
     private func colorForCardState(_ cardState: String) -> Color {
         switch cardState.lowercased() {
@@ -157,6 +184,7 @@ struct FilterSheetView: View {
         selectedTags1.removeAll()
         selectedTags2.removeAll()
         selectedTags3.removeAll()
+        selectedLocationTags.removeAll() // Clear location tags
         selectedCardStates.removeAll()
         
         // Reset all filters in the viewModel
@@ -201,31 +229,41 @@ struct FilterSheetView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             // Removed top Divider
                             
+                            // Section title for Featured
+                            Text("FEATURED")
+                                .font(.system(size: 13))
+                                .fontWeight(.semibold)
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal)
+                            
                             // Adding top padding instead of spacer
                             Spacer()
-                                .frame(height: 12)
+                                .frame(height: 8)
                             
                             HStack(spacing: 6) {
                                 ForEach(availableCardStates, id: \.self) { cardState in
                                     Button(action: {
                                         toggleCardState(cardState)
                                     }) {
-                                        Text(cardState.uppercased())
-                                            .font(.system(size: 12))
-                                            .fontWeight(.medium)
-                                            .foregroundColor(.black)
-                                            .padding(.vertical, 6)
-                                            .padding(.horizontal, 10)
-                                            .background(
-                                                Rectangle()
-                                                    .fill(colorForCardState(cardState))
-                                                    .overlay(
-                                                        Rectangle()
-                                                            .stroke(selectedCardStates.contains(cardState) ? 
-                                                                Color(red: 0.8, green: 0.2, blue: 0.2) : Color.clear,
-                                                                lineWidth: 1.5)
-                                                    )
-                                            )
+                                        HStack(spacing: 4) {
+                                            // Checkmark that appears when selected
+                                            if selectedCardStates.contains(cardState) {
+                                                Image(systemName: "checkmark")
+                                                    .font(.system(size: 10, weight: .bold))
+                                                    .foregroundColor(.black)
+                                            }
+                                            
+                                            Text(cardState.uppercased())
+                                                .font(.system(size: 12))
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.black)
+                                        }
+                                        .padding(.vertical, 6)
+                                        .padding(.horizontal, 10)
+                                        .background(
+                                            Rectangle()
+                                                .fill(colorForCardState(cardState))
+                                        )
                                     }
                                     .buttonStyle(PlainButtonStyle())
                                 }
@@ -244,34 +282,44 @@ struct FilterSheetView: View {
                             // Section 1: Primary tags (cream colored)
                             if !allAvailableTags1.isEmpty {
                                 VStack(alignment: .leading, spacing: 6) {
-                                    Divider()
-                                        .padding(.horizontal)
+                                    // Removed Divider
                                     
-                                    // Add more vertical space (12pts) after the divider
+                                    // Section title for Type
+                                    Text("TYPE")
+                                        .font(.system(size: 13))
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.secondary)
+                                        .padding(.horizontal)
+                                        .padding(.top, 16) // Added top padding for section separation
+                                    
+                                    // Add more vertical space (8pts) after the title
                                     Spacer()
-                                        .frame(height: 12)
+                                        .frame(height: 8)
                                     
                                     FlowLayout(spacing: 6) {
                                         ForEach(allAvailableTags1, id: \.self) { tag in
                                             Button(action: {
                                                 toggleTag1(tag)
                                             }) {
-                                                Text(tag.uppercased())
-                                                    .font(.system(size: 12))
-                                                    .fontWeight(.medium)
-                                                    .foregroundColor(.black)
-                                                    .padding(.vertical, 6)
-                                                    .padding(.horizontal, 10)
-                                                    .background(
-                                                        Rectangle()
-                                                            .fill(Color(red: 0.93, green: 0.87, blue: 0.76))
-                                                            .overlay(
-                                                                Rectangle()
-                                                                    .stroke(selectedTags1.contains(tag) ? 
-                                                                        Color(red: 0.8, green: 0.2, blue: 0.2) : Color.clear,
-                                                                        lineWidth: 1.5)
-                                                            )
-                                                    )
+                                                HStack(spacing: 4) {
+                                                    // Checkmark that appears when selected
+                                                    if selectedTags1.contains(tag) {
+                                                        Image(systemName: "checkmark")
+                                                            .font(.system(size: 10, weight: .bold))
+                                                            .foregroundColor(.black)
+                                                    }
+                                                    
+                                                    Text(tag.uppercased())
+                                                        .font(.system(size: 12))
+                                                        .fontWeight(.medium)
+                                                        .foregroundColor(.black)
+                                                }
+                                                .padding(.vertical, 6)
+                                                .padding(.horizontal, 10)
+                                                .background(
+                                                    Rectangle()
+                                                        .fill(Color(red: 0.93, green: 0.87, blue: 0.76))
+                                                )
                                             }
                                             .buttonStyle(PlainButtonStyle())
                                         }
@@ -283,34 +331,44 @@ struct FilterSheetView: View {
                             // Section 2: Secondary tags (grey colored)
                             if !allAvailableTags2.isEmpty {
                                 VStack(alignment: .leading, spacing: 6) {
-                                    Divider()
-                                        .padding(.horizontal)
+                                    // Removed Divider
                                     
-                                    // Add more vertical space (12pts) after the divider
+                                    // Section title for Vibe
+                                    Text("VIBE")
+                                        .font(.system(size: 13))
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.secondary)
+                                        .padding(.horizontal)
+                                        .padding(.top, 16) // Added top padding for section separation
+                                    
+                                    // Add more vertical space (8pts) after the title
                                     Spacer()
-                                        .frame(height: 12)
+                                        .frame(height: 8)
                                     
                                     FlowLayout(spacing: 6) {
                                         ForEach(allAvailableTags2, id: \.self) { tag in
                                             Button(action: {
                                                 toggleTag2(tag)
                                             }) {
-                                                Text(tag.uppercased())
-                                                    .font(.system(size: 12))
-                                                    .fontWeight(.medium)
-                                                    .foregroundColor(.black)
-                                                    .padding(.vertical, 6)
-                                                    .padding(.horizontal, 10)
-                                                    .background(
-                                                        Rectangle()
-                                                            .fill(Color.gray.opacity(0.2))
-                                                            .overlay(
-                                                                Rectangle()
-                                                                    .stroke(selectedTags2.contains(tag) ? 
-                                                                        Color(red: 0.8, green: 0.2, blue: 0.2) : Color.clear,
-                                                                        lineWidth: 1.5)
-                                                            )
-                                                    )
+                                                HStack(spacing: 4) {
+                                                    // Checkmark that appears when selected
+                                                    if selectedTags2.contains(tag) {
+                                                        Image(systemName: "checkmark")
+                                                            .font(.system(size: 10, weight: .bold))
+                                                            .foregroundColor(.black)
+                                                    }
+                                                    
+                                                    Text(tag.uppercased())
+                                                        .font(.system(size: 12))
+                                                        .fontWeight(.medium)
+                                                        .foregroundColor(.black)
+                                                }
+                                                .padding(.vertical, 6)
+                                                .padding(.horizontal, 10)
+                                                .background(
+                                                    Rectangle()
+                                                        .fill(Color.gray.opacity(0.2))
+                                                )
                                             }
                                             .buttonStyle(PlainButtonStyle())
                                         }
@@ -322,34 +380,91 @@ struct FilterSheetView: View {
                             // Section 3: Tertiary tags (purple colored)
                             if !allAvailableTags3.isEmpty {
                                 VStack(alignment: .leading, spacing: 6) {
-                                    Divider()
-                                        .padding(.horizontal)
+                                    // Removed Divider
                                     
-                                    // Add more vertical space (12pts) after the divider
+                                    // Section title for Cuisine
+                                    Text("CUISINE")
+                                        .font(.system(size: 13))
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.secondary)
+                                        .padding(.horizontal)
+                                        .padding(.top, 16) // Added top padding for section separation
+                                    
+                                    // Add more vertical space (8pts) after the title
                                     Spacer()
-                                        .frame(height: 12)
+                                        .frame(height: 8)
                                     
                                     FlowLayout(spacing: 6) {
                                         ForEach(allAvailableTags3, id: \.self) { tag in
                                             Button(action: {
                                                 toggleTag3(tag)
                                             }) {
-                                                Text(tag.uppercased())
-                                                    .font(.system(size: 12))
-                                                    .fontWeight(.medium)
-                                                    .foregroundColor(.black)
-                                                    .padding(.vertical, 6)
-                                                    .padding(.horizontal, 10)
-                                                    .background(
-                                                        Rectangle()
-                                                            .fill(Color.purple.opacity(0.15))
-                                                            .overlay(
-                                                                Rectangle()
-                                                                    .stroke(selectedTags3.contains(tag) ? 
-                                                                        Color(red: 0.8, green: 0.2, blue: 0.2) : Color.clear,
-                                                                        lineWidth: 1.5)
-                                                            )
-                                                    )
+                                                HStack(spacing: 4) {
+                                                    // Checkmark that appears when selected
+                                                    if selectedTags3.contains(tag) {
+                                                        Image(systemName: "checkmark")
+                                                            .font(.system(size: 10, weight: .bold))
+                                                            .foregroundColor(.black)
+                                                    }
+                                                    
+                                                    Text(tag.uppercased())
+                                                        .font(.system(size: 12))
+                                                        .fontWeight(.medium)
+                                                        .foregroundColor(.black)
+                                                }
+                                                .padding(.vertical, 6)
+                                                .padding(.horizontal, 10)
+                                                .background(
+                                                    Rectangle()
+                                                        .fill(Color.purple.opacity(0.15))
+                                                )
+                                            }
+                                            .buttonStyle(PlainButtonStyle())
+                                        }
+                                    }
+                                    .padding(.horizontal)
+                                }
+                            }
+                            
+                            // Section 4: Location tags (soft teal/aqua colored)
+                            if !allAvailableLocationTags.isEmpty {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    // Section title for Location
+                                    Text("LOCATION")
+                                        .font(.system(size: 13))
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.secondary)
+                                        .padding(.horizontal)
+                                        .padding(.top, 16) // Added top padding for section separation
+                                    
+                                    // Add more vertical space (8pts) after the title
+                                    Spacer()
+                                        .frame(height: 8)
+                                    
+                                    FlowLayout(spacing: 6) {
+                                        ForEach(allAvailableLocationTags, id: \.self) { tag in
+                                            Button(action: {
+                                                toggleLocationTag(tag)
+                                            }) {
+                                                HStack(spacing: 4) {
+                                                    // Checkmark that appears when selected
+                                                    if selectedLocationTags.contains(tag) {
+                                                        Image(systemName: "checkmark")
+                                                            .font(.system(size: 10, weight: .bold))
+                                                            .foregroundColor(.black)
+                                                    }
+                                                    
+                                                    Text(tag.uppercased())
+                                                        .font(.system(size: 12))
+                                                        .fontWeight(.medium)
+                                                        .foregroundColor(.black)
+                                                }
+                                                .padding(.vertical, 6)
+                                                .padding(.horizontal, 10)
+                                                .background(
+                                                    Rectangle()
+                                                        .fill(Color(red: 0.75, green: 0.87, blue: 0.85))
+                                                )
                                             }
                                             .buttonStyle(PlainButtonStyle())
                                         }
@@ -411,6 +526,7 @@ struct FilterSheetView: View {
                 selectedTags1 = Set(viewModel.selectedTags1)
                 selectedTags2 = Set(viewModel.selectedTags2)
                 selectedTags3 = Set(viewModel.selectedTags3)
+                selectedLocationTags = Set(viewModel.selectedLocationTags) // Initialize location tags
                 selectedCardStates = Set(viewModel.selectedCardStates)
                 
                 // Reset warning state when view appears

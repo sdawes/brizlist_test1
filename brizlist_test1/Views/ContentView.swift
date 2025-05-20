@@ -234,6 +234,3 @@ struct ListingsScrollView: View {
     }
 }
 
-#Preview {
-    ContentView()
-}

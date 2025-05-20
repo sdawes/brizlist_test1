@@ -26,6 +26,8 @@ class ListingsViewModel: ObservableObject {
     // Keep references to these properties for future development
     @Published var selectedTags2: Set<String> = []
     @Published var selectedTags3: Set<String> = []
+    // Selected location tags for filtering
+    @Published var selectedLocationTags: Set<String> = []
     
     // Selected card states for filtering
     @Published var selectedCardStates: Set<String> = []
@@ -35,6 +37,7 @@ class ListingsViewModel: ObservableObject {
     private var cachedTags2: [String] = []
     private var cachedTags3: [String] = []
     private var cachedTags: [String] = []
+    private var cachedLocationTags: [String] = []
     
     // Firebase connection
     private let db = Firestore.firestore()
@@ -58,7 +61,8 @@ class ListingsViewModel: ObservableObject {
         hasMoreListings = true
         
         // Check if we have any tag filters selected
-        if selectedTags1.isEmpty && selectedTags2.isEmpty && selectedTags3.isEmpty && selectedCardStates.isEmpty {
+        if selectedTags1.isEmpty && selectedTags2.isEmpty && selectedTags3.isEmpty && 
+           selectedCardStates.isEmpty && selectedLocationTags.isEmpty {
             // No filters, fetch all listings
             fetchAllListings()
         } else {
@@ -205,11 +209,39 @@ class ListingsViewModel: ObservableObject {
         selectedCardStates.removeAll()
     }
     
+    /// Select a location tag for filtering
+    func selectLocationTag(_ tag: String) {
+        selectedLocationTags.insert(tag)
+        // Don't fetch immediately - we'll do that when 'Apply' is pressed
+    }
+    
+    /// Deselect a location tag for filtering
+    func deselectLocationTag(_ tag: String) {
+        selectedLocationTags.remove(tag)
+        // Don't fetch immediately - we'll do that when 'Apply' is pressed
+    }
+    
+    /// Toggle selection of a location tag
+    func toggleLocationTag(_ tag: String) {
+        if selectedLocationTags.contains(tag) {
+            selectedLocationTags.remove(tag)
+        } else {
+            selectedLocationTags.insert(tag)
+        }
+        // Don't fetch immediately - we'll do that when 'Apply' is pressed
+    }
+    
+    /// Clear all location tag selections
+    func clearLocationTags() {
+        selectedLocationTags.removeAll()
+    }
+    
     /// Clear all tag selections
     func clearAllFilters() {
         selectedTags1.removeAll()
         selectedTags2.removeAll()
         selectedTags3.removeAll()
+        selectedLocationTags.removeAll()
         selectedCardStates.removeAll()
         
         // Now fetch listings without filters
@@ -220,7 +252,8 @@ class ListingsViewModel: ObservableObject {
     
     /// Check if any tag filtering is active
     var hasTagFilters: Bool {
-        return !selectedTags1.isEmpty || !selectedTags2.isEmpty || !selectedTags3.isEmpty || !selectedCardStates.isEmpty
+        return !selectedTags1.isEmpty || !selectedTags2.isEmpty || !selectedTags3.isEmpty || 
+               !selectedCardStates.isEmpty || !selectedLocationTags.isEmpty
     }
     
     /// Check if any filtering is active
@@ -323,6 +356,27 @@ class ListingsViewModel: ObservableObject {
     /// Get cached tags values
     func getCachedTags() -> [String] {
         return cachedTags
+    }
+    
+    /// Get all unique locations from current listings
+    func getAllUniqueLocations() -> [String] {
+        var allLocations = Set<String>()
+        
+        // Collect locations from all listings
+        for listing in listings {
+            allLocations.insert(listing.location)
+        }
+        
+        for listing in featuredListings {
+            allLocations.insert(listing.location)
+        }
+        
+        return Array(allLocations).sorted()
+    }
+    
+    /// Get cached location tags
+    func getCachedLocationTags() -> [String] {
+        return cachedLocationTags
     }
     
     // MARK: - Private Methods
@@ -512,6 +566,17 @@ class ListingsViewModel: ObservableObject {
             }
         }
         
+        // Apply location filtering client-side
+        if !selectedLocationTags.isEmpty {
+            filteredDocuments = filteredDocuments.filter { document in
+                let data = document.data()
+                if let location = data["location"] as? String {
+                    return selectedLocationTags.contains(location)
+                }
+                return false
+            }
+        }
+        
         // Check if we have results after client-side filtering
         if filteredDocuments.isEmpty {
             hasMoreListings = false
@@ -621,34 +686,28 @@ class ListingsViewModel: ObservableObject {
         return (featured, regular)
     }
     
-    /// Cache all available tags from listings
+    /// Cache all available tags and filters for future use
     private func cacheAllTagsAndFilters(from listings: [Listing]) {
-        var tags1 = Set<String>()
-        var tags2 = Set<String>()
-        var tags3 = Set<String>()
-        var tags = Set<String>()
+        var tags1Set = Set<String>()
+        var tags2Set = Set<String>()
+        var tags3Set = Set<String>()
+        var tagsSet = Set<String>()
+        var locationsSet = Set<String>()
         
+        // Collect all tags from the listings
         for listing in listings {
-            // Process tags1
-            for filter in listing.tags1 {
-                if filter.lowercased().contains("tag") {
-                    tags.insert(filter)
-                } else {
-                    tags1.insert(filter)
-                }
-            }
-            
-            // Process tags2
-            tags2.formUnion(listing.tags2)
-            
-            // Process tags3
-            tags3.formUnion(listing.tags3)
+            tags1Set.formUnion(listing.tags1.filter { !$0.lowercased().contains("tag") })
+            tags2Set.formUnion(listing.tags2)
+            tags3Set.formUnion(listing.tags3)
+            tagsSet.formUnion(listing.tags1.filter { $0.lowercased().contains("tag") })
+            locationsSet.insert(listing.location)
         }
         
-        // Update cache
-        self.cachedTags1 = Array(tags1)
-        self.cachedTags2 = Array(tags2)
-        self.cachedTags3 = Array(tags3)
-        self.cachedTags = Array(tags)
+        // Update our cached tags
+        cachedTags1 = Array(tags1Set).sorted()
+        cachedTags2 = Array(tags2Set).sorted()
+        cachedTags3 = Array(tags3Set).sorted()
+        cachedTags = Array(tagsSet).sorted()
+        cachedLocationTags = Array(locationsSet).sorted()
     }
 }
