@@ -25,14 +25,24 @@ struct ListingCardView: View {
     
     // MARK: - Computed Properties
     
-    // Check if this is a featured card
-    private var isFeatured: Bool {
-        return listing.cardState == "featured"
+    // Check if this is a large card (formerly called featured)
+    private var isLargeCard: Bool {
+        return listing.cardState == "large"
     }
     
     // Check if this is a new listing
     private var isNewListing: Bool {
         return listing.cardState == "new"
+    }
+    
+    // Check if this is a coming soon listing
+    private var isComingSoon: Bool {
+        return listing.cardState == "coming"
+    }
+    
+    // Check if this is a featured listing
+    private var isFeatured: Bool {
+        return listing.cardState == "featured"
     }
     
     // MARK: - Tag Layout System
@@ -125,6 +135,32 @@ struct ListingCardView: View {
             )
     }
     
+    // Status label for COMING SOON listings
+    private func comingSoonStatusLabel() -> some View {
+        return Text("COMING SOON")
+            .font(.system(size: 11, weight: .bold))
+            .foregroundColor(.black)
+            .padding(.vertical, 3)
+            .padding(.horizontal, 8)
+            .background(
+                Rectangle()
+                    .fill(Color(red: 1.0, green: 0.9, blue: 0.0))
+            )
+    }
+    
+    // Status label for FEATURED listings
+    private func featuredStatusLabel() -> some View {
+        return Text("FEATURED")
+            .font(.system(size: 12, weight: .bold))
+            .foregroundColor(.white)
+            .padding(.vertical, 4)
+            .padding(.horizontal, 10)
+            .background(
+                Rectangle()
+                    .fill(Color(red: 0.0, green: 0.5, blue: 1.0))
+            )
+    }
+    
     // MARK: - Card Design Functions
     
     // Standard card design (used for both default and new states)
@@ -141,13 +177,17 @@ struct ListingCardView: View {
                     HStack(spacing: 6) {
                         // Listing name
                         Text(listing.name)
-                            .font(isFeatured ? .title3 : .headline)
+                            .font(isLargeCard ? .title3 : .headline)
                             .fontWeight(.bold)
                             .lineLimit(1)
                         
-                        // Inline status label (NEW only)
+                        // Inline status labels
                         if isNewListing {
                             newStatusLabel()
+                        } else if isComingSoon {
+                            comingSoonStatusLabel()
+                        } else if isFeatured {
+                            featuredStatusLabel()
                         }
                         
                         Spacer()
@@ -206,8 +246,8 @@ struct ListingCardView: View {
         .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
     }
     
-    // Featured card design (larger with top image)
-    private func featuredCardDesign() -> some View {
+    // Featured card design (larger with top image) - now renamed to large card design
+    private func largeCardDesign() -> some View {
         VStack(spacing: 0) {
             // Top section - image, name, description, location
             VStack(spacing: 0) {
@@ -225,13 +265,17 @@ struct ListingCardView: View {
                     // Listing name
                     HStack(spacing: 6) {
                         Text(listing.name)
-                            .font(isFeatured ? .title3 : .headline)
+                            .font(isLargeCard ? .title3 : .headline)
                             .fontWeight(.bold)
                             .lineLimit(1)
                         
-                        // Inline status label (NEW only)
+                        // Inline status labels
                         if isNewListing {
                             newStatusLabel()
+                        } else if isComingSoon {
+                            comingSoonStatusLabel()
+                        } else if isFeatured {
+                            featuredStatusLabel()
                         }
                         
                         Spacer()
@@ -305,10 +349,10 @@ struct ListingCardView: View {
             showingDetailView = true
         }) {
             // Choose card design based on cardState
-            // Use featured design only for featured listings
-            // Use standard design for both new and default listings
-            if isFeatured {
-                featuredCardDesign()
+            // Use large card design for large listings
+            // Use standard design for all other listings (default, new, coming, featured)
+            if isLargeCard {
+                largeCardDesign()
             } else {
                 standardCardDesign()
             }

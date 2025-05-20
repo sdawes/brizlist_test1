@@ -35,6 +35,10 @@ struct Listing: Identifiable, Codable {
         return cardState == "featured"
     }
     
+    var isLarge: Bool {
+        return cardState == "large"
+    }
+    
     // Updated initializer with consistent required/optional parameters
     init(id: String? = nil, name: String, tags1: [String] = [], tags2: [String] = [], tags3: [String] = [], shortDescription: String, longDescription: String = "", location: String, imageUrl: String? = nil, cardState: String = "default") {
         self.id = id

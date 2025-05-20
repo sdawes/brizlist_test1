@@ -99,6 +99,16 @@ class ListingsViewModel: ObservableObject {
         fetchData(query: query, isInitialFetch: false)
     }
     
+    /// Get only featured listings for the carousel
+    public func getFeaturedListings() -> [Listing] {
+        return listings.filter { $0.cardState == "featured" }
+    }
+    
+    /// Get all non-featured listings for the main list
+    public func getNonFeaturedListings() -> [Listing] {
+        return listings.filter { $0.cardState != "featured" }
+    }
+    
     // MARK: - Tag Selection Methods
     
     /// Select a tag1 (primary tag)
@@ -451,7 +461,22 @@ class ListingsViewModel: ObservableObject {
     /// Sort listings alphabetically by name
     private func sortListingsByName(_ listings: [Listing]) -> [Listing] {
         return listings.sorted { first, second in
-            // Sort alphabetically by name
+            // First prioritize by cardState: "featured" at the top, then "coming", then "new"
+            if first.cardState == "featured" && second.cardState != "featured" {
+                return true
+            } else if first.cardState != "featured" && second.cardState == "featured" {
+                return false
+            } else if first.cardState == "coming" && second.cardState != "coming" {
+                return true
+            } else if first.cardState != "coming" && second.cardState == "coming" {
+                return false
+            } else if first.cardState == "new" && second.cardState != "new" {
+                return true
+            } else if first.cardState != "new" && second.cardState == "new" {
+                return false
+            }
+            
+            // Then sort alphabetically by name
             return first.name < second.name
         }
     }
@@ -676,7 +701,7 @@ class ListingsViewModel: ObservableObject {
         var regular: [Listing] = []
         
         for listing in listings {
-            if listing.isFeatured {
+            if listing.cardState == "large" {
                 featured.append(listing)
             } else {
                 regular.append(listing)
