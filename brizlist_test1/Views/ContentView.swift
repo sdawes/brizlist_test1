@@ -113,88 +113,157 @@ struct ListingsScrollView: View {
                         
                         // Show selected filters
                         if viewModel.hasTagFilters {
-                            VStack(alignment: .leading, spacing: 8) {
+                            VStack(alignment: .leading, spacing: 12) {
                                 Text("Selected filters:")
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(.secondary)
                                 
-                                // Card states (new and featured)
+                                // FEATURED section
                                 if !viewModel.selectedCardStates.isEmpty {
-                                    ScrollView(.horizontal, showsIndicators: false) {
-                                        HStack {
-                                            ForEach(Array(viewModel.selectedCardStates), id: \.self) { cardState in
-                                                Text(cardState.uppercased())
-                                                    .font(.caption)
-                                                    .foregroundColor(.black)
-                                                    .padding(.horizontal, 8)
-                                                    .padding(.vertical, 4)
-                                                    .background(
-                                                        RoundedRectangle(cornerRadius: 8)
-                                                            .fill(cardState == "new" ? Color.green.opacity(0.3) : Color.blue.opacity(0.3))
-                                                    )
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        // Section title
+                                        Text("FEATURED")
+                                            .font(.system(size: 12, weight: .semibold))
+                                            .foregroundColor(.secondary)
+                                            .padding(.leading, 4)
+                                        
+                                        ScrollView(.horizontal, showsIndicators: false) {
+                                            HStack(spacing: 6) {
+                                                ForEach(Array(viewModel.selectedCardStates), id: \.self) { cardState in
+                                                    Text(cardState.uppercased())
+                                                        .font(.caption)
+                                                        .fontWeight(.medium)
+                                                        .foregroundColor(.black)
+                                                        .padding(.vertical, 4)
+                                                        .padding(.horizontal, 8)
+                                                        .background(
+                                                            Rectangle()
+                                                                .fill(cardState == "new" ? Color.green.opacity(0.3) : Color.blue.opacity(0.3))
+                                                        )
+                                                }
                                             }
+                                            .padding(.horizontal, 4)
                                         }
                                     }
                                 }
                                 
-                                // Primary tags (cream)
+                                // TYPE section (Primary tags/cream)
                                 if !viewModel.selectedTags1.isEmpty {
-                                    ScrollView(.horizontal, showsIndicators: false) {
-                                        HStack {
-                                            ForEach(Array(viewModel.selectedTags1), id: \.self) { tag in
-                                                Text(tag.capitalized)
-                                                    .font(.caption)
-                                                    .foregroundColor(.black)
-                                                    .padding(.horizontal, 8)
-                                                    .padding(.vertical, 4)
-                                                    .background(
-                                                        RoundedRectangle(cornerRadius: 8)
-                                                            .fill(Color(red: 0.93, green: 0.87, blue: 0.76))
-                                                    )
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        // Section title
+                                        Text("TYPE")
+                                            .font(.system(size: 12, weight: .semibold))
+                                            .foregroundColor(.secondary)
+                                            .padding(.leading, 4)
+                                        
+                                        ScrollView(.horizontal, showsIndicators: false) {
+                                            HStack(spacing: 6) {
+                                                ForEach(Array(viewModel.selectedTags1), id: \.self) { tag in
+                                                    Text(tag.uppercased())
+                                                        .font(.caption)
+                                                        .fontWeight(.medium)
+                                                        .foregroundColor(.black)
+                                                        .padding(.vertical, 4)
+                                                        .padding(.horizontal, 8)
+                                                        .background(
+                                                            Rectangle()
+                                                                .fill(Color(red: 0.93, green: 0.87, blue: 0.76))
+                                                        )
+                                                }
                                             }
+                                            .padding(.horizontal, 4)
                                         }
                                     }
                                 }
                                 
-                                // Secondary tags (grey)
+                                // VIBE section (Secondary tags/grey)
                                 if !viewModel.selectedTags2.isEmpty {
-                                    ScrollView(.horizontal, showsIndicators: false) {
-                                        HStack {
-                                            ForEach(Array(viewModel.selectedTags2), id: \.self) { tag in
-                                                Text(tag.capitalized)
-                                                    .font(.caption)
-                                                    .foregroundColor(.black)
-                                                    .padding(.horizontal, 8)
-                                                    .padding(.vertical, 4)
-                                                    .background(
-                                                        RoundedRectangle(cornerRadius: 8)
-                                                            .fill(Color.gray.opacity(0.2))
-                                                    )
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        // Section title
+                                        Text("VIBE")
+                                            .font(.system(size: 12, weight: .semibold))
+                                            .foregroundColor(.secondary)
+                                            .padding(.leading, 4)
+                                        
+                                        ScrollView(.horizontal, showsIndicators: false) {
+                                            HStack(spacing: 6) {
+                                                ForEach(Array(viewModel.selectedTags2), id: \.self) { tag in
+                                                    Text(tag.uppercased())
+                                                        .font(.caption)
+                                                        .fontWeight(.medium)
+                                                        .foregroundColor(.black)
+                                                        .padding(.vertical, 4)
+                                                        .padding(.horizontal, 8)
+                                                        .background(
+                                                            Rectangle()
+                                                                .fill(Color.gray.opacity(0.2))
+                                                        )
+                                                }
                                             }
+                                            .padding(.horizontal, 4)
                                         }
                                     }
                                 }
                                 
-                                // Tertiary tags (purple)
+                                // CUISINE section (Tertiary tags/purple)
                                 if !viewModel.selectedTags3.isEmpty {
-                                    ScrollView(.horizontal, showsIndicators: false) {
-                                        HStack {
-                                            ForEach(Array(viewModel.selectedTags3), id: \.self) { tag in
-                                                Text(tag.capitalized)
-                                                    .font(.caption)
-                                                    .foregroundColor(.black)
-                                                    .padding(.horizontal, 8)
-                                                    .padding(.vertical, 4)
-                                                    .background(
-                                                        RoundedRectangle(cornerRadius: 8)
-                                                            .fill(Color.purple.opacity(0.15))
-                                                    )
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        // Section title
+                                        Text("CUISINE")
+                                            .font(.system(size: 12, weight: .semibold))
+                                            .foregroundColor(.secondary)
+                                            .padding(.leading, 4)
+                                        
+                                        ScrollView(.horizontal, showsIndicators: false) {
+                                            HStack(spacing: 6) {
+                                                ForEach(Array(viewModel.selectedTags3), id: \.self) { tag in
+                                                    Text(tag.uppercased())
+                                                        .font(.caption)
+                                                        .fontWeight(.medium)
+                                                        .foregroundColor(.black)
+                                                        .padding(.vertical, 4)
+                                                        .padding(.horizontal, 8)
+                                                        .background(
+                                                            Rectangle()
+                                                                .fill(Color.purple.opacity(0.15))
+                                                        )
+                                                }
                                             }
+                                            .padding(.horizontal, 4)
+                                        }
+                                    }
+                                }
+                                
+                                // LOCATION section (teal/aqua)
+                                if !viewModel.selectedLocationTags.isEmpty {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        // Section title
+                                        Text("LOCATION")
+                                            .font(.system(size: 12, weight: .semibold))
+                                            .foregroundColor(.secondary)
+                                            .padding(.leading, 4)
+                                        
+                                        ScrollView(.horizontal, showsIndicators: false) {
+                                            HStack(spacing: 6) {
+                                                ForEach(Array(viewModel.selectedLocationTags), id: \.self) { tag in
+                                                    Text(tag.uppercased())
+                                                        .font(.caption)
+                                                        .fontWeight(.medium)
+                                                        .foregroundColor(.black)
+                                                        .padding(.vertical, 4)
+                                                        .padding(.horizontal, 8)
+                                                        .background(
+                                                            Rectangle()
+                                                                .fill(Color(red: 0.75, green: 0.87, blue: 0.85))
+                                                        )
+                                                }
+                                            }
+                                            .padding(.horizontal, 4)
                                         }
                                     }
                                 }
                             }
-                            .padding(.top, 8)
+                            .padding(.top, 12)
                             .padding(.horizontal)
                         }
                         

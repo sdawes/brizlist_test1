@@ -11,7 +11,6 @@ import SwiftUI
 struct FilterSheetView: View {
     @ObservedObject var viewModel: ListingsViewModel
     @Environment(\.dismiss) var dismiss
-    @State private var showNoResultsWarning = false
     
     // Track selected tags for each category (local state)
     @State private var selectedTags1: Set<String> = []
@@ -59,20 +58,11 @@ struct FilterSheetView: View {
             viewModel.selectCardState(cardState)
         }
         
-        // Fetch filtered listings but don't dismiss the sheet yet
+        // Fetch filtered listings
         viewModel.fetchListings()
         
-        // Check if current filter selections yield no results
-        // We'll use a small delay to ensure the viewModel has updated
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            if viewModel.noResultsFromFiltering {
-                // Show the warning in this view
-                showNoResultsWarning = true
-            } else {
-                // Only dismiss if we have results
-                dismiss()
-            }
-        }
+        // Always dismiss the filter sheet - let ContentView handle the no results state
+        dismiss()
     }
     
     // Get all available tags1 (primary tags)
@@ -118,8 +108,6 @@ struct FilterSheetView: View {
         } else {
             selectedTags1.insert(tag)
         }
-        // Hide any previous warning when changing selection
-        showNoResultsWarning = false
     }
     
     // Toggle selection of a tag2 (only changes local state, doesn't apply filter yet)
@@ -129,8 +117,6 @@ struct FilterSheetView: View {
         } else {
             selectedTags2.insert(tag)
         }
-        // Hide any previous warning when changing selection
-        showNoResultsWarning = false
     }
     
     // Toggle selection of a tag3 (only changes local state, doesn't apply filter yet)
@@ -140,8 +126,6 @@ struct FilterSheetView: View {
         } else {
             selectedTags3.insert(tag)
         }
-        // Hide any previous warning when changing selection
-        showNoResultsWarning = false
     }
     
     // Toggle selection of a card state (only changes local state, doesn't apply filter yet)
@@ -151,8 +135,6 @@ struct FilterSheetView: View {
         } else {
             selectedCardStates.insert(cardState)
         }
-        // Hide any previous warning when changing selection
-        showNoResultsWarning = false
     }
     
     // Toggle selection of a location tag (only changes local state, doesn't apply filter yet)
@@ -162,8 +144,6 @@ struct FilterSheetView: View {
         } else {
             selectedLocationTags.insert(tag)
         }
-        // Hide any previous warning when changing selection
-        showNoResultsWarning = false
     }
     
     // Get color for card state
@@ -178,6 +158,30 @@ struct FilterSheetView: View {
         }
     }
     
+    // Get color for tag1 (Type)
+    private func colorForTag1(isSelected: Bool = false) -> Color {
+        let baseColor = Color(red: 0.93, green: 0.87, blue: 0.76)
+        return isSelected ? baseColor.opacity(0.9) : baseColor
+    }
+    
+    // Get color for tag2 (Vibe)
+    private func colorForTag2(isSelected: Bool = false) -> Color {
+        let baseColor = Color.gray.opacity(0.2)
+        return isSelected ? baseColor.opacity(0.5) : baseColor
+    }
+    
+    // Get color for tag3 (Cuisine)
+    private func colorForTag3(isSelected: Bool = false) -> Color {
+        let baseColor = Color.purple.opacity(0.15)
+        return isSelected ? baseColor.opacity(0.5) : baseColor
+    }
+    
+    // Get color for location tag
+    private func colorForLocation(isSelected: Bool = false) -> Color {
+        let baseColor = Color(red: 0.75, green: 0.87, blue: 0.85)
+        return isSelected ? baseColor.opacity(0.9) : baseColor
+    }
+    
     // Reset all filters
     private func resetAllFilters() {
         // Clear tag selections in local state
@@ -189,38 +193,11 @@ struct FilterSheetView: View {
         
         // Reset all filters in the viewModel
         viewModel.clearAllFilters()
-        
-        // Reset UI warning
-        showNoResultsWarning = false
     }
     
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // No results warning banner in standard iOS style
-                if showNoResultsWarning {
-                    VStack(spacing: 0) {
-                        HStack {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundColor(.red)
-                            Text("No results found with these filters")
-                                .font(.subheadline)
-                                .foregroundColor(.red)
-                            Spacer()
-                            Button(action: {
-                                showNoResultsWarning = false
-                            }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.gray)
-                            }
-                        }
-                        .padding(.vertical, 8)
-                        .padding(.horizontal)
-                        .background(Color(.systemGray6))
-                    }
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                }
-                
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         // Removed instructional text
@@ -255,7 +232,8 @@ struct FilterSheetView: View {
                                             
                                             Text(cardState.uppercased())
                                                 .font(.system(size: 12))
-                                                .fontWeight(.medium)
+                                                // Use bold text when selected
+                                                .fontWeight(selectedCardStates.contains(cardState) ? .bold : .medium)
                                                 .foregroundColor(.black)
                                         }
                                         .padding(.vertical, 6)
@@ -264,6 +242,10 @@ struct FilterSheetView: View {
                                             Rectangle()
                                                 .fill(colorForCardState(cardState))
                                         )
+                                        // Keep just the scale animation
+                                        .scaleEffect(selectedCardStates.contains(cardState) ? 1.03 : 1.0)
+                                        // Add animation for smooth transition
+                                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedCardStates.contains(cardState))
                                     }
                                     .buttonStyle(PlainButtonStyle())
                                 }
@@ -311,7 +293,8 @@ struct FilterSheetView: View {
                                                     
                                                     Text(tag.uppercased())
                                                         .font(.system(size: 12))
-                                                        .fontWeight(.medium)
+                                                        // Use bold text when selected
+                                                        .fontWeight(selectedTags1.contains(tag) ? .bold : .medium)
                                                         .foregroundColor(.black)
                                                 }
                                                 .padding(.vertical, 6)
@@ -320,6 +303,10 @@ struct FilterSheetView: View {
                                                     Rectangle()
                                                         .fill(Color(red: 0.93, green: 0.87, blue: 0.76))
                                                 )
+                                                // Keep just the scale animation
+                                                .scaleEffect(selectedTags1.contains(tag) ? 1.03 : 1.0)
+                                                // Add animation for smooth transition
+                                                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedTags1.contains(tag))
                                             }
                                             .buttonStyle(PlainButtonStyle())
                                         }
@@ -360,7 +347,8 @@ struct FilterSheetView: View {
                                                     
                                                     Text(tag.uppercased())
                                                         .font(.system(size: 12))
-                                                        .fontWeight(.medium)
+                                                        // Use bold text when selected
+                                                        .fontWeight(selectedTags2.contains(tag) ? .bold : .medium)
                                                         .foregroundColor(.black)
                                                 }
                                                 .padding(.vertical, 6)
@@ -369,6 +357,10 @@ struct FilterSheetView: View {
                                                     Rectangle()
                                                         .fill(Color.gray.opacity(0.2))
                                                 )
+                                                // Keep just the scale animation
+                                                .scaleEffect(selectedTags2.contains(tag) ? 1.03 : 1.0)
+                                                // Add animation for smooth transition
+                                                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedTags2.contains(tag))
                                             }
                                             .buttonStyle(PlainButtonStyle())
                                         }
@@ -409,7 +401,8 @@ struct FilterSheetView: View {
                                                     
                                                     Text(tag.uppercased())
                                                         .font(.system(size: 12))
-                                                        .fontWeight(.medium)
+                                                        // Use bold text when selected
+                                                        .fontWeight(selectedTags3.contains(tag) ? .bold : .medium)
                                                         .foregroundColor(.black)
                                                 }
                                                 .padding(.vertical, 6)
@@ -418,6 +411,10 @@ struct FilterSheetView: View {
                                                     Rectangle()
                                                         .fill(Color.purple.opacity(0.15))
                                                 )
+                                                // Keep just the scale animation
+                                                .scaleEffect(selectedTags3.contains(tag) ? 1.03 : 1.0)
+                                                // Add animation for smooth transition
+                                                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedTags3.contains(tag))
                                             }
                                             .buttonStyle(PlainButtonStyle())
                                         }
@@ -456,7 +453,8 @@ struct FilterSheetView: View {
                                                     
                                                     Text(tag.uppercased())
                                                         .font(.system(size: 12))
-                                                        .fontWeight(.medium)
+                                                        // Use bold text when selected
+                                                        .fontWeight(selectedLocationTags.contains(tag) ? .bold : .medium)
                                                         .foregroundColor(.black)
                                                 }
                                                 .padding(.vertical, 6)
@@ -465,6 +463,10 @@ struct FilterSheetView: View {
                                                     Rectangle()
                                                         .fill(Color(red: 0.75, green: 0.87, blue: 0.85))
                                                 )
+                                                // Keep just the scale animation
+                                                .scaleEffect(selectedLocationTags.contains(tag) ? 1.03 : 1.0)
+                                                // Add animation for smooth transition
+                                                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedLocationTags.contains(tag))
                                             }
                                             .buttonStyle(PlainButtonStyle())
                                         }
@@ -491,33 +493,30 @@ struct FilterSheetView: View {
                         dismiss()
                     }) {
                         Image(systemName: "xmark")
-                            .font(.system(size: 14))
+                            .font(.system(size: 10))
                             .foregroundColor(Color.blue.opacity(0.4))
-                            .padding(6)
+                            .padding(5)
                             .background(
                                 Circle()
                                     .fill(Color(.systemGray5))
-                                    .frame(width: 28, height: 28)
+                                    .frame(width: 24, height: 24)
                             )
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    // "Clear Filters" button replaced with custom diagonal line
+                    // Changed from custom diagonal line to trash can
                     Button(action: {
                         resetAllFilters()
                     }) {
-                        ZStack {
-                            Circle()
-                                .fill(Color(.systemGray5))
-                                .frame(width: 28, height: 28)
-                            
-                            // Simple diagonal line
-                            Rectangle()
-                                .fill(Color.blue.opacity(0.4))
-                                .frame(width: 16, height: 1.5)
-                                .rotationEffect(Angle(degrees: -45))
-                        }
-                        .padding(6)
+                        Image(systemName: "trash")
+                            .font(.system(size: 10))
+                            .foregroundColor(Color.blue.opacity(0.4))
+                            .padding(5)
+                            .background(
+                                Circle()
+                                    .fill(Color(.systemGray5))
+                                    .frame(width: 24, height: 24)
+                            )
                     }
                 }
             }
@@ -528,11 +527,8 @@ struct FilterSheetView: View {
                 selectedTags3 = Set(viewModel.selectedTags3)
                 selectedLocationTags = Set(viewModel.selectedLocationTags) // Initialize location tags
                 selectedCardStates = Set(viewModel.selectedCardStates)
-                
-                // Reset warning state when view appears
-                showNoResultsWarning = false
             }
-            .animation(.default, value: showNoResultsWarning)
+            .animation(.default, value: selectedTags1)
         }
     }
 }
