@@ -86,230 +86,285 @@ struct ListingsScrollView: View {
                         Text("FEATURED")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.secondary)
-                            .padding(.horizontal)
                         
                         // Horizontal scrolling carousel
                         ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 12) {
+                            HStack(alignment: .top, spacing: 12) {
                                 ForEach(viewModel.getFeaturedListings()) { listing in
                                     ListingCardView(listing: listing)
-                                        .frame(width: 280)
+                                        .frame(width: UIScreen.main.bounds.width * 0.85) // 85% of screen width
                                         .id("\(listing.id)-\(deviceOrientation.isLandscape ? "landscape" : "portrait")")
                                 }
                             }
-                            .padding(.horizontal)
+                            .padding(.trailing)
                         }
+                        .padding(.trailing, -12) // Show a peek of the next card
                     }
                     .padding(.top, 8)
                     .padding(.bottom, 8)
                 }
                 
-                // Regular listing flow
-                LazyVStack(spacing: 16) {
-                    // All listings in a single flow, sorted with new at top then alphabetically
-                    ForEach(viewModel.getNonFeaturedListings()) { listing in
-                        // The unified ListingCardView automatically handles all card states
-                        ListingCardView(listing: listing)
-                            .padding(.horizontal)
-                            // Use both listing ID and orientation state to force refresh when orientation changes
-                            .id("\(listing.id)-\(deviceOrientation.isLandscape ? "landscape" : "portrait")")
-                            .onAppear {
-                                if listing.id == viewModel.listings.last?.id {
-                                    viewModel.loadMoreListings()
+                // NEW listings carousel
+                if !viewModel.getNewListings().isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        // Section header
+                        Text("NEW")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.secondary)
+                        
+                        // Horizontal scrolling carousel
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(alignment: .top, spacing: 12) {
+                                ForEach(viewModel.getNewListings()) { listing in
+                                    ListingCardView(listing: listing)
+                                        .frame(width: UIScreen.main.bounds.width * 0.85) // 85% of screen width
+                                        .id("\(listing.id)-\(deviceOrientation.isLandscape ? "landscape" : "portrait")")
                                 }
                             }
-                    }
-                    
-                    // No results message when filtering results in no matches
-                    if viewModel.noResultsFromFiltering {
-                        VStack(spacing: 16) {
-                            Image(systemName: "magnifyingglass")
-                                .font(.system(size: 40))
-                                .foregroundColor(.gray)
-                                .padding(.bottom, 8)
-                            
-                            Text("No listings match all your filters")
-                                .font(.headline)
-                                .foregroundColor(.gray)
-                            
-                            Text("Try selecting fewer filters or a different combination")
-                                .font(.subheadline)
-                                .foregroundColor(.gray)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal, 32)
-                            
-                            // Show selected filters
-                            if viewModel.hasTagFilters {
-                                VStack(alignment: .leading, spacing: 12) {
-                                    Text("Selected filters:")
-                                        .font(.system(size: 14, weight: .medium))
-                                        .foregroundColor(.secondary)
-                                    
-                                    // FEATURED section
-                                    if !viewModel.selectedCardStates.isEmpty {
-                                        VStack(alignment: .leading, spacing: 6) {
-                                            // Section title
-                                            Text("FEATURED")
-                                                .font(.system(size: 12, weight: .semibold))
-                                                .foregroundColor(.secondary)
-                                                .padding(.leading, 4)
-                                            
-                                            ScrollView(.horizontal, showsIndicators: false) {
-                                                HStack(spacing: 6) {
-                                                    ForEach(Array(viewModel.selectedCardStates), id: \.self) { cardState in
-                                                        Text(cardState.uppercased())
-                                                            .font(.caption)
-                                                            .fontWeight(.medium)
-                                                            .foregroundColor(.black)
-                                                            .padding(.vertical, 4)
-                                                            .padding(.horizontal, 8)
-                                                            .background(
-                                                                Rectangle()
-                                                                    .fill(cardState == "new" ? Color.green.opacity(0.3) : 
-                                                                         cardState == "coming" ? Color(red: 1.0, green: 0.9, blue: 0.0).opacity(0.3) :
-                                                                         cardState == "featured" ? Color(red: 0.0, green: 0.4, blue: 0.9).opacity(0.3) :
-                                                                         Color.blue.opacity(0.3))
-                                                            )
-                                                    }
-                                                }
-                                                .padding(.horizontal, 4)
-                                            }
-                                        }
-                                    }
-                                    
-                                    // TYPE section (Primary tags/cream)
-                                    if !viewModel.selectedTags1.isEmpty {
-                                        VStack(alignment: .leading, spacing: 6) {
-                                            // Section title
-                                            Text("TYPE")
-                                                .font(.system(size: 12, weight: .semibold))
-                                                .foregroundColor(.secondary)
-                                                .padding(.leading, 4)
-                                            
-                                            ScrollView(.horizontal, showsIndicators: false) {
-                                                HStack(spacing: 6) {
-                                                    ForEach(Array(viewModel.selectedTags1), id: \.self) { tag in
-                                                        Text(tag.uppercased())
-                                                            .font(.caption)
-                                                            .fontWeight(.medium)
-                                                            .foregroundColor(.black)
-                                                            .padding(.vertical, 4)
-                                                            .padding(.horizontal, 8)
-                                                            .background(
-                                                                Rectangle()
-                                                                    .fill(Color(red: 0.93, green: 0.87, blue: 0.76))
-                                                            )
-                                                    }
-                                                }
-                                                .padding(.horizontal, 4)
-                                            }
-                                        }
-                                    }
-                                    
-                                    // VIBE section (Secondary tags/grey)
-                                    if !viewModel.selectedTags2.isEmpty {
-                                        VStack(alignment: .leading, spacing: 6) {
-                                            // Section title
-                                            Text("VIBE")
-                                                .font(.system(size: 12, weight: .semibold))
-                                                .foregroundColor(.secondary)
-                                                .padding(.leading, 4)
-                                            
-                                            ScrollView(.horizontal, showsIndicators: false) {
-                                                HStack(spacing: 6) {
-                                                    ForEach(Array(viewModel.selectedTags2), id: \.self) { tag in
-                                                        Text(tag.uppercased())
-                                                            .font(.caption)
-                                                            .fontWeight(.medium)
-                                                            .foregroundColor(.black)
-                                                            .padding(.vertical, 4)
-                                                            .padding(.horizontal, 8)
-                                                            .background(
-                                                                Rectangle()
-                                                                    .fill(Color.gray.opacity(0.2))
-                                                            )
-                                                    }
-                                                }
-                                                .padding(.horizontal, 4)
-                                            }
-                                        }
-                                    }
-                                    
-                                    // CUISINE section (Tertiary tags/purple)
-                                    if !viewModel.selectedTags3.isEmpty {
-                                        VStack(alignment: .leading, spacing: 6) {
-                                            // Section title
-                                            Text("CUISINE")
-                                                .font(.system(size: 12, weight: .semibold))
-                                                .foregroundColor(.secondary)
-                                                .padding(.leading, 4)
-                                            
-                                            ScrollView(.horizontal, showsIndicators: false) {
-                                                HStack(spacing: 6) {
-                                                    ForEach(Array(viewModel.selectedTags3), id: \.self) { tag in
-                                                        Text(tag.uppercased())
-                                                            .font(.caption)
-                                                            .fontWeight(.medium)
-                                                            .foregroundColor(.black)
-                                                            .padding(.vertical, 4)
-                                                            .padding(.horizontal, 8)
-                                                            .background(
-                                                                Rectangle()
-                                                                    .fill(Color.purple.opacity(0.15))
-                                                            )
-                                                    }
-                                                }
-                                                .padding(.horizontal, 4)
-                                            }
-                                        }
-                                    }
-                                    
-                                    // LOCATION section (teal/aqua)
-                                    if !viewModel.selectedLocationTags.isEmpty {
-                                        VStack(alignment: .leading, spacing: 6) {
-                                            // Section title
-                                            Text("LOCATION")
-                                                .font(.system(size: 12, weight: .semibold))
-                                                .foregroundColor(.secondary)
-                                                .padding(.leading, 4)
-                                            
-                                            ScrollView(.horizontal, showsIndicators: false) {
-                                                HStack(spacing: 6) {
-                                                    ForEach(Array(viewModel.selectedLocationTags), id: \.self) { tag in
-                                                        Text(tag.uppercased())
-                                                            .font(.caption)
-                                                            .fontWeight(.medium)
-                                                            .foregroundColor(.black)
-                                                            .padding(.vertical, 4)
-                                                            .padding(.horizontal, 8)
-                                                            .background(
-                                                                Rectangle()
-                                                                    .fill(Color(red: 0.75, green: 0.87, blue: 0.85))
-                                                            )
-                                                    }
-                                                }
-                                                .padding(.horizontal, 4)
-                                            }
-                                        }
-                                    }
-                                }
-                                .padding(.top, 12)
-                                .padding(.horizontal)
-                            }
-                            
-                            Button("Adjust Filters") {
-                                // This will open the filter sheet
-                                onFilterTap()
-                            }
-                            .padding(.vertical, 8)
-                            .padding(.horizontal, 16)
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
-                            .padding(.top, 8)
+                            .padding(.trailing)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 40)
+                        .padding(.trailing, -12) // Show a peek of the next card
+                    }
+                    .padding(.top, 8)
+                    .padding(.bottom, 8)
+                }
+                
+                // COMING SOON listings carousel
+                if !viewModel.getComingSoonListings().isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        // Section header
+                        Text("COMING SOON")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.secondary)
+                        
+                        // Horizontal scrolling carousel
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(alignment: .top, spacing: 12) {
+                                ForEach(viewModel.getComingSoonListings()) { listing in
+                                    ListingCardView(listing: listing)
+                                        .frame(width: UIScreen.main.bounds.width * 0.85) // 85% of screen width
+                                        .id("\(listing.id)-\(deviceOrientation.isLandscape ? "landscape" : "portrait")")
+                                }
+                            }
+                            .padding(.trailing)
+                        }
+                        .padding(.trailing, -12) // Show a peek of the next card
+                    }
+                    .padding(.top, 8)
+                    .padding(.bottom, 8)
+                }
+                
+                // Regular listing flow (excluding featured, new, and coming soon)
+                VStack(alignment: .leading, spacing: 12) {
+                    // Section header for regular listings
+                    Text("ALL LISTINGS")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.secondary)
+                    
+                    LazyVStack(spacing: 16) {
+                        // All remaining listings in a single flow, sorted alphabetically
+                        ForEach(viewModel.getRegularListings()) { listing in
+                            // The unified ListingCardView automatically handles all card states
+                            ListingCardView(listing: listing)
+                                .id("\(listing.id)-\(deviceOrientation.isLandscape ? "landscape" : "portrait")")
+                                .onAppear {
+                                    if listing.id == viewModel.listings.last?.id {
+                                        viewModel.loadMoreListings()
+                                    }
+                                }
+                        }
+                        
+                        // No results message when filtering results in no matches
+                        if viewModel.noResultsFromFiltering {
+                            VStack(spacing: 16) {
+                                Image(systemName: "magnifyingglass")
+                                    .font(.system(size: 40))
+                                    .foregroundColor(.gray)
+                                    .padding(.bottom, 8)
+                                
+                                Text("No listings match all your filters")
+                                    .font(.headline)
+                                    .foregroundColor(.gray)
+                                
+                                Text("Try selecting fewer filters or a different combination")
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 32)
+                                
+                                // Show selected filters
+                                if viewModel.hasTagFilters {
+                                    VStack(alignment: .leading, spacing: 12) {
+                                        Text("Selected filters:")
+                                            .font(.system(size: 14, weight: .medium))
+                                            .foregroundColor(.secondary)
+                                        
+                                        // FEATURED section
+                                        if !viewModel.selectedCardStates.isEmpty {
+                                            VStack(alignment: .leading, spacing: 6) {
+                                                // Section title
+                                                Text("FEATURED")
+                                                    .font(.system(size: 12, weight: .semibold))
+                                                    .foregroundColor(.secondary)
+                                                    .padding(.leading, 4)
+                                                
+                                                ScrollView(.horizontal, showsIndicators: false) {
+                                                    HStack(spacing: 6) {
+                                                        ForEach(Array(viewModel.selectedCardStates), id: \.self) { cardState in
+                                                            Text(cardState.uppercased())
+                                                                .font(.caption)
+                                                                .fontWeight(.medium)
+                                                                .foregroundColor(.black)
+                                                                .padding(.vertical, 4)
+                                                                .padding(.horizontal, 8)
+                                                                .background(
+                                                                    Rectangle()
+                                                                        .fill(cardState == "new" ? Color.green.opacity(0.3) : 
+                                                                             cardState == "coming" ? Color(red: 1.0, green: 0.9, blue: 0.0).opacity(0.3) :
+                                                                             cardState == "featured" ? Color(red: 0.0, green: 0.4, blue: 0.9).opacity(0.3) :
+                                                                             Color.blue.opacity(0.3))
+                                                                )
+                                                        }
+                                                    }
+                                                    .padding(.horizontal, 4)
+                                                }
+                                            }
+                                        }
+                                        
+                                        // TYPE section (Primary tags/cream)
+                                        if !viewModel.selectedTags1.isEmpty {
+                                            VStack(alignment: .leading, spacing: 6) {
+                                                // Section title
+                                                Text("TYPE")
+                                                    .font(.system(size: 12, weight: .semibold))
+                                                    .foregroundColor(.secondary)
+                                                    .padding(.leading, 4)
+                                                
+                                                ScrollView(.horizontal, showsIndicators: false) {
+                                                    HStack(spacing: 6) {
+                                                        ForEach(Array(viewModel.selectedTags1), id: \.self) { tag in
+                                                            Text(tag.uppercased())
+                                                                .font(.caption)
+                                                                .fontWeight(.medium)
+                                                                .foregroundColor(.black)
+                                                                .padding(.vertical, 4)
+                                                                .padding(.horizontal, 8)
+                                                                .background(
+                                                                    Rectangle()
+                                                                        .fill(Color(red: 0.93, green: 0.87, blue: 0.76))
+                                                                )
+                                                        }
+                                                    }
+                                                    .padding(.horizontal, 4)
+                                                }
+                                            }
+                                        }
+                                        
+                                        // VIBE section (Secondary tags/grey)
+                                        if !viewModel.selectedTags2.isEmpty {
+                                            VStack(alignment: .leading, spacing: 6) {
+                                                // Section title
+                                                Text("VIBE")
+                                                    .font(.system(size: 12, weight: .semibold))
+                                                    .foregroundColor(.secondary)
+                                                    .padding(.leading, 4)
+                                                
+                                                ScrollView(.horizontal, showsIndicators: false) {
+                                                    HStack(spacing: 6) {
+                                                        ForEach(Array(viewModel.selectedTags2), id: \.self) { tag in
+                                                            Text(tag.uppercased())
+                                                                .font(.caption)
+                                                                .fontWeight(.medium)
+                                                                .foregroundColor(.black)
+                                                                .padding(.vertical, 4)
+                                                                .padding(.horizontal, 8)
+                                                                .background(
+                                                                    Rectangle()
+                                                                        .fill(Color.gray.opacity(0.2))
+                                                                )
+                                                        }
+                                                    }
+                                                    .padding(.horizontal, 4)
+                                                }
+                                            }
+                                        }
+                                        
+                                        // CUISINE section (Tertiary tags/purple)
+                                        if !viewModel.selectedTags3.isEmpty {
+                                            VStack(alignment: .leading, spacing: 6) {
+                                                // Section title
+                                                Text("CUISINE")
+                                                    .font(.system(size: 12, weight: .semibold))
+                                                    .foregroundColor(.secondary)
+                                                    .padding(.leading, 4)
+                                                
+                                                ScrollView(.horizontal, showsIndicators: false) {
+                                                    HStack(spacing: 6) {
+                                                        ForEach(Array(viewModel.selectedTags3), id: \.self) { tag in
+                                                            Text(tag.uppercased())
+                                                                .font(.caption)
+                                                                .fontWeight(.medium)
+                                                                .foregroundColor(.black)
+                                                                .padding(.vertical, 4)
+                                                                .padding(.horizontal, 8)
+                                                                .background(
+                                                                    Rectangle()
+                                                                        .fill(Color.purple.opacity(0.15))
+                                                                )
+                                                        }
+                                                    }
+                                                    .padding(.horizontal, 4)
+                                                }
+                                            }
+                                        }
+                                        
+                                        // LOCATION section (teal/aqua)
+                                        if !viewModel.selectedLocationTags.isEmpty {
+                                            VStack(alignment: .leading, spacing: 6) {
+                                                // Section title
+                                                Text("LOCATION")
+                                                    .font(.system(size: 12, weight: .semibold))
+                                                    .foregroundColor(.secondary)
+                                                    .padding(.leading, 4)
+                                                
+                                                ScrollView(.horizontal, showsIndicators: false) {
+                                                    HStack(spacing: 6) {
+                                                        ForEach(Array(viewModel.selectedLocationTags), id: \.self) { tag in
+                                                            Text(tag.uppercased())
+                                                                .font(.caption)
+                                                                .fontWeight(.medium)
+                                                                .foregroundColor(.black)
+                                                                .padding(.vertical, 4)
+                                                                .padding(.horizontal, 8)
+                                                                .background(
+                                                                    Rectangle()
+                                                                        .fill(Color(red: 0.75, green: 0.87, blue: 0.85))
+                                                                )
+                                                        }
+                                                    }
+                                                    .padding(.horizontal, 4)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    .padding(.top, 12)
+                                    .padding(.horizontal)
+                                }
+                                
+                                Button("Adjust Filters") {
+                                    // This will open the filter sheet
+                                    onFilterTap()
+                                }
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 16)
+                                .background(Color.blue)
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
+                                .padding(.top, 8)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 40)
+                        }
                     }
                 }
                 
@@ -325,6 +380,7 @@ struct ListingsScrollView: View {
                         .padding()
                 }
             }
+            .padding(.horizontal, 16) // Add consistent horizontal padding to the entire content
             // Use both sizeClass and orientation for the ID
             .id("scrollview-\(sizeClass == .regular ? "regular" : "compact")-\(deviceOrientation.isLandscape ? "landscape" : "portrait")")
             .padding(.top)
