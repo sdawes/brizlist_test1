@@ -12,7 +12,6 @@ struct ContentView: View {
     @StateObject private var viewModel = ListingsViewModel()
     @State private var showingFilterSheet = false
     @Environment(\.horizontalSizeClass) private var sizeClass
-    @State private var deviceOrientation = UIDevice.current.orientation
     
     var body: some View {
         ZStack {
@@ -39,12 +38,8 @@ struct ContentView: View {
                 ListingsScrollView(
                     viewModel: viewModel,
                     onFilterTap: { showingFilterSheet = true },
-                    sizeClass: sizeClass,
-                    deviceOrientation: deviceOrientation
+                    sizeClass: sizeClass
                 )
-            }
-            .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
-                self.deviceOrientation = UIDevice.current.orientation
             }
         }
         .onAppear {
@@ -70,7 +65,6 @@ struct ListingsScrollView: View {
     @ObservedObject var viewModel: ListingsViewModel
     var onFilterTap: () -> Void
     let sizeClass: UserInterfaceSizeClass?
-    let deviceOrientation: UIDeviceOrientation
     
     var body: some View {
         ScrollView {
@@ -84,8 +78,12 @@ struct ListingsScrollView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         // Section header
                         Text("FEATURED")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.secondary)
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, 10)
+                            .background(Color(red: 0.0, green: 0.4, blue: 0.9).opacity(0.8))
+                            .cornerRadius(4)
                         
                         // Horizontal scrolling carousel
                         ScrollView(.horizontal, showsIndicators: false) {
@@ -93,7 +91,7 @@ struct ListingsScrollView: View {
                                 ForEach(viewModel.getFeaturedListings()) { listing in
                                     ListingCardView(listing: listing)
                                         .frame(width: UIScreen.main.bounds.width * 0.85) // 85% of screen width
-                                        .id("\(listing.id)-\(deviceOrientation.isLandscape ? "landscape" : "portrait")")
+                                        .id(listing.id)
                                 }
                             }
                             .padding(.trailing)
@@ -109,8 +107,12 @@ struct ListingsScrollView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         // Section header
                         Text("NEW")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.secondary)
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, 10)
+                            .background(Color.green.opacity(0.8))
+                            .cornerRadius(4)
                         
                         // Horizontal scrolling carousel
                         ScrollView(.horizontal, showsIndicators: false) {
@@ -118,7 +120,7 @@ struct ListingsScrollView: View {
                                 ForEach(viewModel.getNewListings()) { listing in
                                     ListingCardView(listing: listing)
                                         .frame(width: UIScreen.main.bounds.width * 0.85) // 85% of screen width
-                                        .id("\(listing.id)-\(deviceOrientation.isLandscape ? "landscape" : "portrait")")
+                                        .id(listing.id)
                                 }
                             }
                             .padding(.trailing)
@@ -134,8 +136,12 @@ struct ListingsScrollView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         // Section header
                         Text("COMING SOON")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.secondary)
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.black)
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, 10)
+                            .background(Color(red: 1.0, green: 0.9, blue: 0.0).opacity(0.8))
+                            .cornerRadius(4)
                         
                         // Horizontal scrolling carousel
                         ScrollView(.horizontal, showsIndicators: false) {
@@ -143,7 +149,7 @@ struct ListingsScrollView: View {
                                 ForEach(viewModel.getComingSoonListings()) { listing in
                                     ListingCardView(listing: listing)
                                         .frame(width: UIScreen.main.bounds.width * 0.85) // 85% of screen width
-                                        .id("\(listing.id)-\(deviceOrientation.isLandscape ? "landscape" : "portrait")")
+                                        .id(listing.id)
                                 }
                             }
                             .padding(.trailing)
@@ -154,19 +160,23 @@ struct ListingsScrollView: View {
                     .padding(.bottom, 8)
                 }
                 
-                // Regular listing flow (excluding featured, new, and coming soon)
+                // Regular listing flow
                 VStack(alignment: .leading, spacing: 12) {
                     // Section header for regular listings
                     Text("ALL LISTINGS")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.secondary)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, 10)
+                        .background(Color(red: 0.3, green: 0.3, blue: 0.35).opacity(0.8)) // Slate blue-gray color
+                        .cornerRadius(4)
                     
                     LazyVStack(spacing: 16) {
                         // All remaining listings in a single flow, sorted alphabetically
                         ForEach(viewModel.getRegularListings()) { listing in
                             // The unified ListingCardView automatically handles all card states
                             ListingCardView(listing: listing)
-                                .id("\(listing.id)-\(deviceOrientation.isLandscape ? "landscape" : "portrait")")
+                                .id(listing.id)
                                 .onAppear {
                                     if listing.id == viewModel.listings.last?.id {
                                         viewModel.loadMoreListings()
@@ -381,8 +391,8 @@ struct ListingsScrollView: View {
                 }
             }
             .padding(.horizontal, 16) // Add consistent horizontal padding to the entire content
-            // Use both sizeClass and orientation for the ID
-            .id("scrollview-\(sizeClass == .regular ? "regular" : "compact")-\(deviceOrientation.isLandscape ? "landscape" : "portrait")")
+            // Use sizeClass for the ID
+            .id("scrollview-\(sizeClass == .regular ? "regular" : "compact")")
             .padding(.top)
             .padding(.bottom, 80)
         }

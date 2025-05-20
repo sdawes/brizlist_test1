@@ -8,9 +8,21 @@
 import SwiftUI
 import FirebaseCore
 import FirebaseFirestore
+import UIKit
+
+// Add a class that conforms to UIApplicationDelegate to handle orientation restrictions
+class AppDelegate: NSObject, UIApplicationDelegate {
+    // Restrict app to portrait orientation only
+    func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+        return .portrait // This restricts the app to portrait orientation only
+    }
+}
 
 @main
 struct BrizlistApp: App {
+    // Register the app delegate
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    
     // Initialize Firebase when the app starts
     init() {
         // Configure Firebase for Firestore and Storage access

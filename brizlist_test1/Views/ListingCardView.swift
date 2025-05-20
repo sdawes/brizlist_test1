@@ -122,44 +122,7 @@ struct ListingCardView: View {
     
     // MARK: - Helper Views
     
-    // Status label for NEW listings
-    private func newStatusLabel() -> some View {
-        return Text("NEW")
-            .font(.system(size: 11, weight: .bold))
-            .foregroundColor(.black)
-            .padding(.vertical, 3)
-            .padding(.horizontal, 8)
-            .background(
-                Rectangle()
-                    .fill(Color(red: 0.1, green: 0.9, blue: 0.4))
-            )
-    }
-    
-    // Status label for COMING SOON listings
-    private func comingSoonStatusLabel() -> some View {
-        return Text("COMING SOON")
-            .font(.system(size: 11, weight: .bold))
-            .foregroundColor(.black)
-            .padding(.vertical, 3)
-            .padding(.horizontal, 8)
-            .background(
-                Rectangle()
-                    .fill(Color(red: 1.0, green: 0.9, blue: 0.0))
-            )
-    }
-    
-    // Status label for FEATURED listings
-    private func featuredStatusLabel() -> some View {
-        return Text("FEATURED")
-            .font(.system(size: 12, weight: .bold))
-            .foregroundColor(.white)
-            .padding(.vertical, 4)
-            .padding(.horizontal, 10)
-            .background(
-                Rectangle()
-                    .fill(Color(red: 0.0, green: 0.5, blue: 1.0))
-            )
-    }
+    // Status label methods removed since they're no longer needed
     
     // MARK: - Card Design Functions
     
@@ -180,15 +143,6 @@ struct ListingCardView: View {
                             .font(isLargeCard ? .title3 : .headline)
                             .fontWeight(.bold)
                             .lineLimit(1)
-                        
-                        // Inline status labels
-                        if isNewListing {
-                            newStatusLabel()
-                        } else if isComingSoon {
-                            comingSoonStatusLabel()
-                        } else if isFeatured {
-                            featuredStatusLabel()
-                        }
                         
                         Spacer()
                     }
@@ -268,15 +222,6 @@ struct ListingCardView: View {
                             .font(isLargeCard ? .title3 : .headline)
                             .fontWeight(.bold)
                             .lineLimit(1)
-                        
-                        // Inline status labels
-                        if isNewListing {
-                            newStatusLabel()
-                        } else if isComingSoon {
-                            comingSoonStatusLabel()
-                        } else if isFeatured {
-                            featuredStatusLabel()
-                        }
                         
                         Spacer()
                     }
