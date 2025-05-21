@@ -73,88 +73,61 @@ struct ListingsScrollView: View {
             }
             
             VStack(spacing: 16) {
-                // Featured listings carousel at the top
+                // Featured listings at the top
                 if !viewModel.getFeaturedListings().isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
-                        // Section header
+                        // Standard section header
                         Text("FEATURED")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding(.vertical, 4)
-                            .padding(.horizontal, 10)
-                            .background(Color(red: 0.0, green: 0.4, blue: 0.9).opacity(0.8))
-                            .cornerRadius(4)
+                            .font(.headline)
+                            .foregroundColor(.primary)
                         
-                        // Horizontal scrolling carousel
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(alignment: .top, spacing: 12) {
-                                ForEach(viewModel.getFeaturedListings()) { listing in
-                                    ListingCardView(listing: listing)
-                                        .frame(width: UIScreen.main.bounds.width * 0.85) // 85% of screen width
-                                        .id(listing.id)
-                                }
+                        // Vertical list instead of horizontal carousel
+                        VStack(spacing: 12) {
+                            ForEach(viewModel.getFeaturedListings()) { listing in
+                                ListingCardView(listing: listing)
+                                    .id(listing.id)
                             }
-                            .padding(.trailing)
                         }
-                        .padding(.trailing, -12) // Show a peek of the next card
                     }
                     .padding(.top, 8)
                     .padding(.bottom, 8)
                 }
                 
-                // NEW listings carousel
-                if !viewModel.getNewListings().isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        // Section header
-                        Text("NEW")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding(.vertical, 4)
-                            .padding(.horizontal, 10)
-                            .background(Color.green.opacity(0.8))
-                            .cornerRadius(4)
-                        
-                        // Horizontal scrolling carousel
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(alignment: .top, spacing: 12) {
-                                ForEach(viewModel.getNewListings()) { listing in
-                                    ListingCardView(listing: listing)
-                                        .frame(width: UIScreen.main.bounds.width * 0.85) // 85% of screen width
-                                        .id(listing.id)
-                                }
-                            }
-                            .padding(.trailing)
-                        }
-                        .padding(.trailing, -12) // Show a peek of the next card
-                    }
-                    .padding(.top, 8)
-                    .padding(.bottom, 8)
-                }
-                
-                // COMING SOON listings carousel
+                // COMING SOON listings
                 if !viewModel.getComingSoonListings().isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
-                        // Section header
+                        // Standard section header
                         Text("COMING SOON")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.black)
-                            .padding(.vertical, 4)
-                            .padding(.horizontal, 10)
-                            .background(Color(red: 1.0, green: 0.9, blue: 0.0).opacity(0.8))
-                            .cornerRadius(4)
+                            .font(.headline)
+                            .foregroundColor(.primary)
                         
-                        // Horizontal scrolling carousel
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(alignment: .top, spacing: 12) {
-                                ForEach(viewModel.getComingSoonListings()) { listing in
-                                    ListingCardView(listing: listing)
-                                        .frame(width: UIScreen.main.bounds.width * 0.85) // 85% of screen width
-                                        .id(listing.id)
-                                }
+                        // Vertical list instead of horizontal carousel
+                        VStack(spacing: 12) {
+                            ForEach(viewModel.getComingSoonListings()) { listing in
+                                ListingCardView(listing: listing)
+                                    .id(listing.id)
                             }
-                            .padding(.trailing)
                         }
-                        .padding(.trailing, -12) // Show a peek of the next card
+                    }
+                    .padding(.top, 8)
+                    .padding(.bottom, 8)
+                }
+                
+                // NEW listings
+                if !viewModel.getNewListings().isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        // Standard section header
+                        Text("NEWLY ADDED")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        
+                        // Vertical list instead of horizontal carousel
+                        VStack(spacing: 12) {
+                            ForEach(viewModel.getNewListings()) { listing in
+                                ListingCardView(listing: listing)
+                                    .id(listing.id)
+                            }
+                        }
                     }
                     .padding(.top, 8)
                     .padding(.bottom, 8)
@@ -162,14 +135,10 @@ struct ListingsScrollView: View {
                 
                 // Regular listing flow
                 VStack(alignment: .leading, spacing: 12) {
-                    // Section header for regular listings
-                    Text("ALL LISTINGS")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.white)
-                        .padding(.vertical, 4)
-                        .padding(.horizontal, 10)
-                        .background(Color(red: 0.3, green: 0.3, blue: 0.35).opacity(0.8)) // Slate blue-gray color
-                        .cornerRadius(4)
+                    // Standard section header for regular listings
+                    Text("OTHER LISTINGS")
+                        .font(.headline)
+                        .foregroundColor(.primary)
                     
                     LazyVStack(spacing: 16) {
                         // All remaining listings in a single flow, sorted alphabetically
