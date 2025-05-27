@@ -29,7 +29,7 @@ struct ListingsScrollView: View {
                         // Vertical list instead of horizontal carousel
                         VStack(spacing: 12) {
                             ForEach(viewModel.getFeaturedListings()) { listing in
-                                ListingCardView(listing: listing)
+                                FeaturedCardView(listing: listing)
                                     .id(listing.id)
                             }
                         }
@@ -47,7 +47,7 @@ struct ListingsScrollView: View {
                         // Vertical list instead of horizontal carousel
                         VStack(spacing: 12) {
                             ForEach(viewModel.getComingSoonListings()) { listing in
-                                ListingCardView(listing: listing)
+                                ComingSoonCardView(listing: listing)
                                     .id(listing.id)
                             }
                         }
@@ -65,7 +65,25 @@ struct ListingsScrollView: View {
                         // Vertical list instead of horizontal carousel
                         VStack(spacing: 12) {
                             ForEach(viewModel.getNewListings()) { listing in
-                                ListingCardView(listing: listing)
+                                NewCardView(listing: listing)
+                                    .id(listing.id)
+                            }
+                        }
+                    }
+                    .padding(.top, 8)
+                    .padding(.bottom, 8)
+                }
+                
+                // LARGE listings
+                if !viewModel.getLargeListings().isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        // Use SectionHeaderView component
+                        SectionHeaderView(title: "LARGE FORMAT")
+                        
+                        // Vertical list instead of horizontal carousel
+                        VStack(spacing: 12) {
+                            ForEach(viewModel.getLargeListings()) { listing in
+                                LargeCardView(listing: listing)
                                     .id(listing.id)
                             }
                         }
@@ -82,8 +100,8 @@ struct ListingsScrollView: View {
                     LazyVStack(spacing: 16) {
                         // All remaining listings in a single flow, sorted alphabetically
                         ForEach(viewModel.getRegularListings()) { listing in
-                            // The unified ListingCardView automatically handles all card states
-                            ListingCardView(listing: listing)
+                            // Use DefaultCardView for all regular listings (not featured, coming, new, or large)
+                            DefaultCardView(listing: listing)
                                 .id(listing.id)
                                 .onAppear {
                                     if listing.id == viewModel.listings.last?.id {

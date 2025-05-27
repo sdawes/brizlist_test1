@@ -114,9 +114,14 @@ class ListingsViewModel: ObservableObject {
         return listings.filter { $0.cardState == "coming" }
     }
     
-    /// Get all regular listings for the main list (excluding featured, new, and coming soon)
+    /// Get only large listings for the carousel
+    public func getLargeListings() -> [Listing] {
+        return listings.filter { $0.cardState == "large" }
+    }
+    
+    /// Get all regular listings for the main list (excluding featured, new, coming soon, and large)
     public func getRegularListings() -> [Listing] {
-        return listings.filter { $0.cardState != "featured" && $0.cardState != "new" && $0.cardState != "coming" }
+        return listings.filter { $0.cardState != "featured" && $0.cardState != "new" && $0.cardState != "coming" && $0.cardState != "large" }
     }
     
     /// Get all non-featured listings for the main list
