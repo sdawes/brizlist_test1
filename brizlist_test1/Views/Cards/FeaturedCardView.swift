@@ -19,8 +19,8 @@ struct FeaturedCardView: View {
     
     // MARK: - Card Dimensions
     
-    // Large card height for featured state (same as large cards)
-    private let standardHeight: CGFloat = 320
+    // Featured card height (320pt for prominent display)
+    private let featuredHeight: CGFloat = 320
     
     // MARK: - Tag Layout System
     
@@ -99,21 +99,26 @@ struct FeaturedCardView: View {
     
     // MARK: - Card Design
     
-    // Featured card design - reverted to simple white background
+    // Featured card design with full-width top image
     private func cardDesign() -> some View {
         VStack(spacing: 0) {
-            // Top section - name, description, location and image
-            ZStack {
-                // Main content area
+            // Top section - image, name, description, location
+            VStack(spacing: 0) {
+                // Image at the top - covers full width
+                FirebaseStorageImage(urlString: listing.imageUrl)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: featuredHeight / 2)  // 50% of card height (160pt)
+                    .clipShape(Rectangle())
+                
+                // Content section below image
                 VStack(alignment: .leading, spacing: 4) {
                     Spacer()
                     .frame(height: 16) // Space above the name
                     
-                    // Name row
+                    // Listing name
                     HStack(spacing: 6) {
-                        // Listing name
                         Text(listing.name)
-                            .font(.headline)
+                            .font(.title3)
                             .fontWeight(.bold)
                             .lineLimit(1)
                         
@@ -133,43 +138,32 @@ struct FeaturedCardView: View {
                     .foregroundColor(.black)
                     .padding(.top, 8)
                     
-                    // Description (if available) now comes after location
+                    // Description section (now comes after location)
                     if !listing.shortDescription.isEmpty {
                         Text(listing.shortDescription)
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.leading)
-                            .lineLimit(3) // Limit to 3 lines
+                            .lineLimit(6) // Limit to 6 lines
                             .fixedSize(horizontal: false, vertical: true)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.top, 8)
                     }
                     
-                    Spacer(minLength: 16) // Ensure minimum spacing
+                    Spacer(minLength: 8) // Ensure minimum spacing at bottom
                     
                     Spacer()
-                    .frame(height: 16) // Space at the bottom
+                    .frame(height: 12) // Reduced space at bottom
                 }
                 .padding(.horizontal, 12)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             }
-            .frame(minHeight: standardHeight * 0.75, alignment: .center) // 75% height, allows expansion with center alignment
+            .frame(minHeight: featuredHeight * 0.85) // 85% height, allows expansion
+            .background(Color.white)
             
             // Bottom section - tags with wrapping
             tagsSection()
         }
-        .frame(minHeight: standardHeight)
-        .background(
-            FirebaseStorageImage(urlString: listing.imageUrl)
-                .aspectRatio(contentMode: .fill)
-        )
-        .overlay(
-            LinearGradient(
-                gradient: Gradient(colors: [Color.white, Color.white.opacity(0)]),
-                startPoint: .bottom,
-                endPoint: .top
-            )
-        )
+        .frame(minHeight: featuredHeight)
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
     }

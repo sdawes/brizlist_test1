@@ -22,7 +22,7 @@ struct FilterSheetView: View {
     @State private var selectedCardStates: Set<String> = []
     
     // Available card states
-    private let availableCardStates = ["new", "featured", "large", "coming"]
+    private let availableCardStates = ["new", "featured", "coming"]
     
     // Apply all selected filters
     private func applyFilters() {
@@ -153,8 +153,6 @@ struct FilterSheetView: View {
             return Color.green.opacity(0.3)
         case "featured":
             return Color(red: 0.0, green: 0.4, blue: 0.9).opacity(0.3)
-        case "large":
-            return Color.blue.opacity(0.3)
         case "coming":
             return Color(red: 1.0, green: 0.9, blue: 0.0).opacity(0.3)
         default:
@@ -537,7 +535,7 @@ struct FilterSheetView: View {
     }
 }
 
-// FlowLayout for wrapping tags similar to ListingCardView
+// FlowLayout for wrapping tags similar to the card views
 struct FlowLayout: Layout {
     var spacing: CGFloat = 8
     

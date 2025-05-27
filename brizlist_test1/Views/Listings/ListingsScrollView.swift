@@ -74,24 +74,6 @@ struct ListingsScrollView: View {
                     .padding(.bottom, 8)
                 }
                 
-                // LARGE listings
-                if !viewModel.getLargeListings().isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        // Use SectionHeaderView component
-                        SectionHeaderView(title: "LARGE FORMAT")
-                        
-                        // Vertical list instead of horizontal carousel
-                        VStack(spacing: 12) {
-                            ForEach(viewModel.getLargeListings()) { listing in
-                                LargeCardView(listing: listing)
-                                    .id(listing.id)
-                            }
-                        }
-                    }
-                    .padding(.top, 8)
-                    .padding(.bottom, 8)
-                }
-                
                 // Regular listing flow
                 VStack(alignment: .leading, spacing: 12) {
                     // Use SectionHeaderView component
@@ -100,7 +82,7 @@ struct ListingsScrollView: View {
                     LazyVStack(spacing: 16) {
                         // All remaining listings in a single flow, sorted alphabetically
                         ForEach(viewModel.getRegularListings()) { listing in
-                            // Use DefaultCardView for all regular listings (not featured, coming, new, or large)
+                            // Use DefaultCardView for all regular listings (not featured, coming, or new)
                             DefaultCardView(listing: listing)
                                 .id(listing.id)
                                 .onAppear {
