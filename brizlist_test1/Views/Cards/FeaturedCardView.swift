@@ -154,12 +154,22 @@ struct FeaturedCardView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             }
             .frame(minHeight: standardHeight * 0.75, alignment: .center) // 75% height, allows expansion with center alignment
-            .background(Color.white) // White background for featured cards
             
             // Bottom section - tags with wrapping
             tagsSection()
         }
         .frame(minHeight: standardHeight)
+        .background(
+            FirebaseStorageImage(urlString: listing.imageUrl)
+                .aspectRatio(contentMode: .fill)
+        )
+        .overlay(
+            LinearGradient(
+                gradient: Gradient(colors: [Color.white, Color.white.opacity(0)]),
+                startPoint: .bottom,
+                endPoint: .top
+            )
+        )
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
     }
