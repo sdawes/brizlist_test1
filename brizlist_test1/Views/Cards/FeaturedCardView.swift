@@ -19,8 +19,8 @@ struct FeaturedCardView: View {
     
     // MARK: - Card Dimensions
     
-    // Standard card height for featured state
-    private let standardHeight: CGFloat = 200
+    // Large card height for featured state (same as large cards)
+    private let standardHeight: CGFloat = 320
     
     // MARK: - Tag Layout System
     
@@ -99,7 +99,7 @@ struct FeaturedCardView: View {
     
     // MARK: - Card Design
     
-    // Featured card design with light blue background
+    // Featured card design - reverted to simple white background
     private func cardDesign() -> some View {
         VStack(spacing: 0) {
             // Top section - name, description, location and image
@@ -119,7 +119,6 @@ struct FeaturedCardView: View {
                         
                         Spacer()
                     }
-                    .padding(.trailing, 140) // Keep space for the image
                     
                     // Footer with location (now comes first)
                     HStack(spacing: 4) {
@@ -142,7 +141,7 @@ struct FeaturedCardView: View {
                             .multilineTextAlignment(.leading)
                             .lineLimit(3) // Limit to 3 lines
                             .fixedSize(horizontal: false, vertical: true)
-                            .frame(width: UIScreen.main.bounds.width * 0.50, alignment: .leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.top, 8)
                     }
                     
@@ -153,17 +152,9 @@ struct FeaturedCardView: View {
                 }
                 .padding(.horizontal, 12)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-                
-                // Floating image on the right side
-                FirebaseStorageImage(urlString: listing.imageUrl)
-                    .frame(width: 120, height: 120)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                    .padding(.trailing, 16)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-                    .padding(.vertical, 16) // Equal padding above and below the image
             }
             .frame(minHeight: standardHeight * 0.75, alignment: .center) // 75% height, allows expansion with center alignment
-            .background(Color.blue.opacity(0.1)) // Light blue background for featured cards
+            .background(Color.white) // White background for featured cards
             
             // Bottom section - tags with wrapping
             tagsSection()
