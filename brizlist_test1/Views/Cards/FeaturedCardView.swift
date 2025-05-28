@@ -166,6 +166,15 @@ struct FeaturedCardView: View {
         .frame(minHeight: featuredHeight)
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        .overlay(
+            // Featured status badge in top-left corner
+            CardStatusBadge(
+                statusText: "FEATURED",
+                backgroundColor: Color.blue.opacity(0.8),
+                cardWidth: 350 // Approximate card width for mobile screens
+            ),
+            alignment: .topLeading
+        )
     }
     
     // Shared tags section

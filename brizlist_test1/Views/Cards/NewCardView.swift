@@ -171,6 +171,15 @@ struct NewCardView: View {
         .frame(minHeight: standardHeight)
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        .overlay(
+            // New status badge in top-left corner
+            CardStatusBadge(
+                statusText: "NEW",
+                backgroundColor: Color.green.opacity(0.8),
+                cardWidth: 350 // Approximate card width for mobile screens
+            ),
+            alignment: .topLeading
+        )
     }
     
     // Shared tags section
