@@ -163,19 +163,24 @@ struct NewCardView: View {
                     .padding(.vertical, 16) // Equal padding above and below the image
             }
             .frame(minHeight: standardHeight * 0.75, alignment: .center) // 75% height, allows expansion with center alignment
-            .background(Color.green.opacity(0.15)) // Light green background for new cards
+            .background(Color.white) // Changed from green background to white
             
             // Bottom section - tags with wrapping
             tagsSection()
         }
         .frame(minHeight: standardHeight)
         .cornerRadius(12)
+        .overlay(
+            // Border that matches the badge color
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(CardStatusBadge.BadgeType.new.borderColor, lineWidth: 2)
+        )
         .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
         .overlay(
             // New status badge in top-left corner
             CardStatusBadge(
                 statusText: "NEW",
-                backgroundColor: Color.green.opacity(0.8),
+                badgeType: .new,
                 cardWidth: 350 // Approximate card width for mobile screens
             ),
             alignment: .topLeading

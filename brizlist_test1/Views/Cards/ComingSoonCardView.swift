@@ -163,19 +163,24 @@ struct ComingSoonCardView: View {
                     .padding(.vertical, 16) // Equal padding above and below the image
             }
             .frame(minHeight: standardHeight * 0.75, alignment: .center) // 75% height, allows expansion with center alignment
-            .background(Color.yellow.opacity(0.15)) // Light yellow background for coming soon cards
+            .background(Color.white) // Changed from yellow background to white
             
             // Bottom section - tags with wrapping
             tagsSection()
         }
         .frame(minHeight: standardHeight)
         .cornerRadius(12)
+        .overlay(
+            // Border that matches the badge color
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(CardStatusBadge.BadgeType.comingSoon.borderColor, lineWidth: 2)
+        )
         .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
         .overlay(
             // Coming Soon status badge in top-left corner
             CardStatusBadge(
                 statusText: "COMING SOON",
-                backgroundColor: Color.orange.opacity(0.8),
+                badgeType: .comingSoon,
                 cardWidth: 350 // Approximate card width for mobile screens
             ),
             alignment: .topLeading

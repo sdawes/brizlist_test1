@@ -13,8 +13,30 @@ import SwiftUI
 /// - Reusable across different card types
 struct CardStatusBadge: View {
     let statusText: String
-    let backgroundColor: Color
+    let badgeType: BadgeType
     let cardWidth: CGFloat
+    
+    // Badge type enumeration with associated colors
+    enum BadgeType {
+        case featured
+        case new
+        case comingSoon
+        
+        var backgroundColor: Color {
+            switch self {
+            case .featured:
+                return Color.blue
+            case .new:
+                return Color.green
+            case .comingSoon:
+                return Color.orange
+            }
+        }
+        
+        var borderColor: Color {
+            return backgroundColor // Same color for border and badge
+        }
+    }
     
     // Badge dimensions
     private var badgeWidth: CGFloat {
@@ -31,7 +53,7 @@ struct CardStatusBadge: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
             .frame(width: badgeWidth, height: badgeHeight)
-            .background(backgroundColor)
+            .background(badgeType.backgroundColor)
             .clipShape(
                 CustomCornerShape(
                     topLeft: cardCornerRadius,
@@ -126,21 +148,21 @@ struct CardStatusBadge_Previews: PreviewProvider {
             // Featured badge
             CardStatusBadge(
                 statusText: "FEATURED",
-                backgroundColor: Color.blue.opacity(0.8),
+                badgeType: .featured,
                 cardWidth: 300
             )
             
             // New badge
             CardStatusBadge(
                 statusText: "NEW",
-                backgroundColor: Color.green.opacity(0.8),
+                badgeType: .new,
                 cardWidth: 300
             )
             
             // Coming Soon badge
             CardStatusBadge(
                 statusText: "COMING SOON",
-                backgroundColor: Color.orange.opacity(0.8),
+                badgeType: .comingSoon,
                 cardWidth: 300
             )
         }
