@@ -688,6 +688,16 @@ class ListingsViewModel: ObservableObject {
     private func createListingFromDocument(_ document: QueryDocumentSnapshot) -> Listing? {
         let data = document.data()
         
+        // Parse openingDate from Firestore Timestamp
+        var openingDate: Date? = nil
+        if let timestamp = data["openingDate"] as? Timestamp {
+            openingDate = timestamp.dateValue()
+            let cardState = data["cardState"] as? String ?? "default"
+            print("✅ Found openingDate for \(data["name"] as? String ?? "Unknown"): \(openingDate!) - cardState: \(cardState)")
+        } else {
+            print("❌ No openingDate found for \(data["name"] as? String ?? "Unknown"). Raw data: \(data["openingDate"] ?? "nil")")
+        }
+        
         return Listing(
             id: document.documentID,
             name: data["name"] as? String ?? "",
@@ -698,7 +708,8 @@ class ListingsViewModel: ObservableObject {
             longDescription: data["longDescription"] as? String ?? "",
             location: data["location"] as? String ?? "",
             imageUrl: data["imageUrl"] as? String,
-            cardState: data["cardState"] as? String ?? "default"
+            cardState: data["cardState"] as? String ?? "default",
+            openingDate: openingDate
         )
     }
     

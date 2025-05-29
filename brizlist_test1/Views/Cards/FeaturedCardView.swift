@@ -108,7 +108,6 @@ struct FeaturedCardView: View {
                 FirebaseStorageImage(urlString: listing.imageUrl)
                     .frame(maxWidth: .infinity)
                     .frame(height: featuredHeight / 2)  // 50% of card height (160pt)
-                    .clipShape(Rectangle())
                 
                 // Content section below image
                 VStack(alignment: .leading, spacing: 4) {
@@ -165,21 +164,7 @@ struct FeaturedCardView: View {
         }
         .frame(minHeight: featuredHeight)
         .cornerRadius(12)
-        .overlay(
-            // Border that matches the badge color
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(CardStatusBadge.BadgeType.featured.borderColor, lineWidth: 2)
-        )
         .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-        .overlay(
-            // Featured status badge in top-left corner
-            CardStatusBadge(
-                statusText: "FEATURED",
-                badgeType: .featured,
-                cardWidth: 350 // Approximate card width for mobile screens
-            ),
-            alignment: .topLeading
-        )
     }
     
     // Shared tags section

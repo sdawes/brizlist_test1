@@ -22,37 +22,40 @@ struct ListingsScrollView: View {
             VStack(spacing: 16) {
                 // Featured listings at the top
                 if !viewModel.getFeaturedListings().isEmpty {
+                    SectionHeaderView(title: "FEATURED")
+                    
                     VStack(spacing: 12) {
                         ForEach(viewModel.getFeaturedListings()) { listing in
                             FeaturedCardView(listing: listing)
                                 .id(listing.id)
                         }
                     }
-                    .padding(.top, 8)
                     .padding(.bottom, 8)
                 }
                 
                 // NEW listings (moved before COMING SOON)
                 if !viewModel.getNewListings().isEmpty {
+                    SectionHeaderView(title: "NEW")
+                    
                     VStack(spacing: 12) {
                         ForEach(viewModel.getNewListings()) { listing in
                             NewCardView(listing: listing)
                                 .id(listing.id)
                         }
                     }
-                    .padding(.top, 8)
                     .padding(.bottom, 8)
                 }
                 
                 // COMING SOON listings
                 if !viewModel.getComingSoonListings().isEmpty {
+                    SectionHeaderView(title: "COMING SOON")
+                    
                     VStack(spacing: 12) {
                         ForEach(viewModel.getComingSoonListings()) { listing in
                             ComingSoonCardView(listing: listing)
                                 .id(listing.id)
                         }
                     }
-                    .padding(.top, 8)
                     .padding(.bottom, 8)
                 }
                 

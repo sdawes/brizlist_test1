@@ -19,6 +19,7 @@ struct Listing: Identifiable, Codable {
     var location: String
     var imageUrl: String?
     var cardState: String  // New field that replaces isFeatured and isNew
+    var openingDate: Date?  // New field for coming soon listings
     
     // Helper to get a displayable URL
     var displayImageUrl: URL? {
@@ -35,8 +36,12 @@ struct Listing: Identifiable, Codable {
         return cardState == "featured"
     }
     
+    var isComingSoon: Bool {
+        return cardState == "coming"
+    }
+    
     // Updated initializer with consistent required/optional parameters
-    init(id: String? = nil, name: String, tags1: [String] = [], tags2: [String] = [], tags3: [String] = [], shortDescription: String, longDescription: String = "", location: String, imageUrl: String? = nil, cardState: String = "default") {
+    init(id: String? = nil, name: String, tags1: [String] = [], tags2: [String] = [], tags3: [String] = [], shortDescription: String, longDescription: String = "", location: String, imageUrl: String? = nil, cardState: String = "default", openingDate: Date? = nil) {
         self.id = id
         self.name = name
         self.tags1 = tags1
@@ -47,5 +52,6 @@ struct Listing: Identifiable, Codable {
         self.location = location
         self.imageUrl = imageUrl
         self.cardState = cardState
+        self.openingDate = openingDate
     }
 }

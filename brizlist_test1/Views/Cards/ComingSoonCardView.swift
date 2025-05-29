@@ -7,6 +7,17 @@
 
 import SwiftUI
 
+// MARK: - DateFormatter Extension
+
+extension DateFormatter {
+    static let shortDate: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter
+    }()
+}
+
 /// A card view component for coming soon listings
 /// - Displays listings in standard format with side image
 /// - Uses light yellow background to distinguish from default cards
@@ -146,7 +157,24 @@ struct ComingSoonCardView: View {
                             .padding(.top, 8)
                     }
                     
-                    Spacer(minLength: 16) // Ensure minimum spacing
+                    // Opening date display (positioned after description)
+                    if let openingDate = listing.openingDate {
+                        HStack {
+                            Text("Opens: \(openingDate, formatter: DateFormatter.shortDate)")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundColor(.orange)
+                                .padding(.vertical, 4)
+                                .padding(.horizontal, 8)
+                                .background(Color.orange.opacity(0.1))
+                                .cornerRadius(6)
+                            
+                            Spacer()
+                        }
+                        .padding(.top, 4)
+                    }
+                    
+                    Spacer(minLength: 8) // Reduced minimum spacing to compensate for opening date
                     
                     Spacer()
                     .frame(height: 16) // Space at the bottom
@@ -170,21 +198,7 @@ struct ComingSoonCardView: View {
         }
         .frame(minHeight: standardHeight)
         .cornerRadius(12)
-        .overlay(
-            // Border that matches the badge color
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(CardStatusBadge.BadgeType.comingSoon.borderColor, lineWidth: 2)
-        )
         .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-        .overlay(
-            // Coming Soon status badge in top-left corner
-            CardStatusBadge(
-                statusText: "COMING SOON",
-                badgeType: .comingSoon,
-                cardWidth: 350 // Approximate card width for mobile screens
-            ),
-            alignment: .topLeading
-        )
     }
     
     // Shared tags section
