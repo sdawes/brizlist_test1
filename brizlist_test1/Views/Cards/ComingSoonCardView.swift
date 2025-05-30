@@ -232,7 +232,7 @@ struct ComingSoonCardView: View {
             NavigationView {
                 ListingDetailView(listing: listing)
             }
-            .presentationDragIndicator(.visible)
+            .presentationDragIndicator(.hidden)
         }
     }
 }

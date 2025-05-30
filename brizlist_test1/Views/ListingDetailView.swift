@@ -108,95 +108,117 @@ struct ListingDetailView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    // Hero image at the top with proper width constraints
+                VStack(alignment: .leading, spacing: 0) {
+                    // Hero image at the top - contained within safe area
                     if let imageUrl = listing.imageUrl {
                         FirebaseStorageImage(urlString: imageUrl)
-                            .aspectRatio(16/9, contentMode: .fill)
-                            .frame(maxWidth: UIScreen.main.bounds.width - 40)
+                            .aspectRatio(4/3, contentMode: .fill)
+                            .frame(maxWidth: UIScreen.main.bounds.width)
+                            .frame(height: 280)
                             .clipped()
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                            .shadow(radius: 2)
                     }
                     
-                    Text(listing.name)
-                        .font(.title3.bold())
-                    
-                    // Combined tags - primary, secondary, and tertiary in a continuous flow with wrapping
-                    if !listing.tags1.isEmpty || !listing.tags2.isEmpty || !listing.tags3.isEmpty {
-                        wrappingTagsView
-                            .frame(height: tagsHeight > 0 ? tagsHeight : 30)
-                            .padding(.bottom, 8)
-                    }
-                    
-                    // Description
-                    if !listing.longDescription.isEmpty {
-                        Text(listing.longDescription)
-                            .font(.callout)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.bottom, 16)
-                    } else if !listing.shortDescription.isEmpty {
-                        // Fall back to shortDescription if longDescription is empty
-                        Text(listing.shortDescription)
-                            .font(.callout)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.bottom, 16)
-                    } else {
-                        // Simple fallback message
-                        Text("Description not available at this time")
-                            .font(.callout)
-                            .foregroundColor(.secondary)
-                            .padding(.bottom, 16)
-                    }
-                    
-                    // Location information
-                    if !listing.location.isEmpty {
-                        Divider()
-                        
-                        Text("Location")
-                            .font(.title3.bold())
+                    // Content container with proper editorial spacing
+                    VStack(alignment: .leading, spacing: 24) {
+                        // Header section
+                        VStack(alignment: .leading, spacing: 12) {
+                            // Title with editorial styling
+                            Text(listing.name)
+                                .font(.system(size: 32, weight: .bold, design: .default))
+                                .lineLimit(nil)
+                                .fixedSize(horizontal: false, vertical: true)
                             
-                        HStack(spacing: 8) {
-                            Image(systemName: "location.circle.fill")
-                                .foregroundColor(.black)
-                                .font(.caption)
-                                .frame(width: 20, alignment: .center)
-                            Text(listing.location)
-                                .font(.caption)
-                        }
-                    }
-                    
-                    Divider()
-                    
-                    Text("Opening Hours")
-                        .font(.title3.bold())
-                    
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "clock")
-                                .foregroundColor(.black)
-                                .font(.caption)
-                                .frame(width: 20, alignment: .center)
-                            Text("Mon-Fri: 9am - 10pm")
-                                .font(.caption)
+                            // Subtitle/location with refined styling
+                            HStack(spacing: 8) {
+                                Image(systemName: "location")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                
+                                Text(listing.location)
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                    .textCase(.uppercase)
+                                    .tracking(0.5)
+                            }
+                            
+                            // Tags with refined spacing
+                            if !listing.tags1.isEmpty || !listing.tags2.isEmpty || !listing.tags3.isEmpty {
+                                wrappingTagsView
+                                    .frame(height: tagsHeight > 0 ? tagsHeight : 30)
+                            }
                         }
                         
-                        HStack(spacing: 8) {
-                            Image(systemName: "clock")
-                                .foregroundColor(.black)
-                                .font(.caption)
-                                .frame(width: 20, alignment: .center)
-                            Text("Sat-Sun: 10am - 11pm")
-                                .font(.caption)
+                        // Divider
+                        Rectangle()
+                            .fill(Color(.systemGray4))
+                            .frame(height: 1)
+                            .padding(.vertical, 8)
+                        
+                        // Main review content
+                        VStack(alignment: .leading, spacing: 20) {
+                            // Review text with editorial styling
+                            if !listing.longDescription.isEmpty {
+                                Text(listing.longDescription)
+                                    .font(.system(size: 16, weight: .regular))
+                                    .lineSpacing(6)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            } else if !listing.shortDescription.isEmpty {
+                                Text(listing.shortDescription)
+                                    .font(.system(size: 16, weight: .regular))
+                                    .lineSpacing(6)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            
+                            // Pull quote or highlight (if description is long enough)
+                            if !listing.longDescription.isEmpty && listing.longDescription.count > 100 {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Rectangle()
+                                        .fill(Color.accentColor)
+                                        .frame(width: 4, height: 40)
+                                    
+                                    Text("The kind of place that feels special without being over the top")
+                                        .font(.system(size: 20, weight: .medium))
+                                        .italic()
+                                        .foregroundColor(.primary)
+                                        .lineSpacing(4)
+                                }
+                                .padding(.leading, 16)
+                                .padding(.vertical, 16)
+                            }
                         }
+                        
+                        // Bottom spacing
+                        Spacer()
+                            .frame(height: 40)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 32)
+                    .frame(maxWidth: UIScreen.main.bounds.width - 48) // Account for horizontal padding
+                }
+                .frame(maxWidth: UIScreen.main.bounds.width) // Constrain entire container
+                .background(Color(.systemBackground))
+            }
+            .navigationTitle("Review")
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(true)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    // X button to close the detail view - same styling as FilterSheetView
+                    Button(action: {
+                        dismiss()
+                    }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 10))
+                            .foregroundColor(Color.blue.opacity(0.4))
+                            .padding(5)
+                            .background(
+                                Circle()
+                                    .fill(Color(.systemGray5))
+                                    .frame(width: 24, height: 24)
+                            )
                     }
                 }
-                .padding(20)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.white)
             }
-            .navigationTitle("Details")
-            .navigationBarTitleDisplayMode(.inline)
         }
     }
 }

@@ -203,7 +203,7 @@ struct DefaultCardView: View {
             NavigationView {
                 ListingDetailView(listing: listing)
             }
-            .presentationDragIndicator(.visible)
+            .presentationDragIndicator(.hidden)
         }
     }
 }
