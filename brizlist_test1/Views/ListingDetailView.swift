@@ -4,8 +4,25 @@
 //
 //  Created by Stephen Dawes on 14/03/2025.
 //
+//  PULL QUOTE SYNTAX:
+//  To add pull quotes to your longDescription, use: [quote]Your compelling quote here[/quote]
+//  The quote will be automatically extracted and displayed as a highlighted pull quote.
+//  The quote text will be removed from the main description to avoid duplication.
+//
 
 import SwiftUI
+
+// MARK: - Content Block Types
+
+enum ContentBlockType {
+    case text
+    case quote
+}
+
+struct ContentBlock {
+    let type: ContentBlockType
+    let content: String
+}
 
 // TagView component for displaying tags
 struct TagView: View {
@@ -34,6 +51,92 @@ struct ListingDetailView: View {
     let listing: Listing
     @Environment(\.dismiss) var dismiss
     @State private var tagsHeight: CGFloat = 0
+    
+    // MARK: - Pull Quote Parsing
+    
+    /// Parse longDescription into content blocks with inline pull quotes
+    private func parseContentBlocks(from text: String) -> [ContentBlock] {
+        var blocks: [ContentBlock] = []
+        var remainingText = text
+        
+        let pattern = "\\[quote\\](.*?)\\[/quote\\]"
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators]) else {
+            // If regex fails, return the whole text as one block
+            return [ContentBlock(type: .text, content: text)]
+        }
+        
+        let range = NSRange(location: 0, length: remainingText.utf16.count)
+        let matches = regex.matches(in: remainingText, options: [], range: range)
+        
+        var lastEnd = 0
+        
+        for match in matches {
+            // Add text before the quote
+            if match.range.location > lastEnd {
+                let beforeRange = NSRange(location: lastEnd, length: match.range.location - lastEnd)
+                if let textRange = Range(beforeRange, in: remainingText) {
+                    let beforeText = String(remainingText[textRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !beforeText.isEmpty {
+                        blocks.append(ContentBlock(type: .text, content: beforeText))
+                    }
+                }
+            }
+            
+            // Add the quote
+            let quoteRange = match.range(at: 1)
+            if let quoteTextRange = Range(quoteRange, in: remainingText) {
+                let quoteText = String(remainingText[quoteTextRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !quoteText.isEmpty {
+                    blocks.append(ContentBlock(type: .quote, content: quoteText))
+                }
+            }
+            
+            lastEnd = match.range.location + match.range.length
+        }
+        
+        // Add remaining text after the last quote
+        if lastEnd < remainingText.utf16.count {
+            let afterRange = NSRange(location: lastEnd, length: remainingText.utf16.count - lastEnd)
+            if let textRange = Range(afterRange, in: remainingText) {
+                let afterText = String(remainingText[textRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !afterText.isEmpty {
+                    blocks.append(ContentBlock(type: .text, content: afterText))
+                }
+            }
+        }
+        
+        return blocks.isEmpty ? [ContentBlock(type: .text, content: text)] : blocks
+    }
+    
+    /// Extract pull quotes from longDescription using [quote]...[/quote] syntax
+    private func extractPullQuote(from text: String) -> String? {
+        let pattern = "\\[quote\\](.*?)\\[/quote\\]"
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators]) else {
+            return nil
+        }
+        
+        let range = NSRange(location: 0, length: text.utf16.count)
+        if let match = regex.firstMatch(in: text, options: [], range: range) {
+            let quoteRange = Range(match.range(at: 1), in: text)
+            return quoteRange.map { String(text[$0]).trimmingCharacters(in: .whitespacesAndNewlines) }
+        }
+        
+        return nil
+    }
+    
+    /// Remove pull quote markup from text for clean display
+    private func cleanDescriptionText(_ text: String) -> String {
+        let pattern = "\\[quote\\].*?\\[/quote\\]"
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators]) else {
+            return text
+        }
+        
+        let range = NSRange(location: 0, length: text.utf16.count)
+        let cleanText = regex.stringByReplacingMatches(in: text, options: [], range: range, withTemplate: "")
+        
+        // Clean up any double line breaks that might result from removing quotes
+        return cleanText.replacingOccurrences(of: "\n\n\n", with: "\n\n").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
     
     // Simple wrapping HStack for tags with dynamic height
     private var wrappingTagsView: some View {
@@ -131,11 +234,11 @@ struct ListingDetailView: View {
                             // Subtitle/location with refined styling
                             HStack(spacing: 8) {
                                 Image(systemName: "location")
-                                    .font(.system(size: 12, weight: .medium))
+                                    .font(.system(size: 10, weight: .medium))
                                     .foregroundColor(.secondary)
                                 
                                 Text(listing.location)
-                                    .font(.system(size: 14, weight: .medium))
+                                    .font(.system(size: 12, weight: .medium))
                                     .foregroundColor(.secondary)
                                     .textCase(.uppercase)
                                     .tracking(0.5)
@@ -156,34 +259,41 @@ struct ListingDetailView: View {
                         
                         // Main review content
                         VStack(alignment: .leading, spacing: 20) {
-                            // Review text with editorial styling
+                            // Review text with editorial styling and inline quotes
                             if !listing.longDescription.isEmpty {
-                                Text(listing.longDescription)
-                                    .font(.system(size: 16, weight: .regular))
-                                    .lineSpacing(6)
-                                    .fixedSize(horizontal: false, vertical: true)
+                                let contentBlocks = parseContentBlocks(from: listing.longDescription)
+                                
+                                VStack(alignment: .leading, spacing: 16) {
+                                    ForEach(Array(contentBlocks.enumerated()), id: \.offset) { index, block in
+                                        if block.type == .text {
+                                            Text(block.content)
+                                                .font(.system(size: 15, weight: .regular))
+                                                .lineSpacing(6)
+                                                .fixedSize(horizontal: false, vertical: true)
+                                        } else if block.type == .quote {
+                                            // Inline pull quote with quotation mark
+                                            HStack(alignment: .top, spacing: 8) {
+                                                Text("\"")
+                                                    .font(.system(size: 32, weight: .light))
+                                                    .foregroundColor(.gray)
+                                                    .offset(y: -4)
+                                                
+                                                Text(block.content)
+                                                    .font(.system(size: 17, weight: .bold))
+                                                    .italic()
+                                                    .foregroundColor(.primary)
+                                                    .lineSpacing(4)
+                                                    .fixedSize(horizontal: false, vertical: true)
+                                            }
+                                            .padding(.vertical, 4)
+                                        }
+                                    }
+                                }
                             } else if !listing.shortDescription.isEmpty {
                                 Text(listing.shortDescription)
-                                    .font(.system(size: 16, weight: .regular))
+                                    .font(.system(size: 15, weight: .regular))
                                     .lineSpacing(6)
                                     .fixedSize(horizontal: false, vertical: true)
-                            }
-                            
-                            // Pull quote or highlight (if description is long enough)
-                            if !listing.longDescription.isEmpty && listing.longDescription.count > 100 {
-                                VStack(alignment: .leading, spacing: 12) {
-                                    Rectangle()
-                                        .fill(Color.accentColor)
-                                        .frame(width: 4, height: 40)
-                                    
-                                    Text("The kind of place that feels special without being over the top")
-                                        .font(.system(size: 20, weight: .medium))
-                                        .italic()
-                                        .foregroundColor(.primary)
-                                        .lineSpacing(4)
-                                }
-                                .padding(.leading, 16)
-                                .padding(.vertical, 16)
                             }
                         }
                         

@@ -18,7 +18,7 @@ struct SectionHeaderView: View {
         VStack(spacing: 0) {
             // Top spacing
             Spacer()
-                .frame(height: 24)
+                .frame(height: 12)
             
             // Title and horizontal line
             VStack(spacing: 8) {
