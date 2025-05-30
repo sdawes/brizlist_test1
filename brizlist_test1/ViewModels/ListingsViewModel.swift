@@ -692,10 +692,6 @@ class ListingsViewModel: ObservableObject {
         var openingDate: Date? = nil
         if let timestamp = data["openingDate"] as? Timestamp {
             openingDate = timestamp.dateValue()
-            let cardState = data["cardState"] as? String ?? "default"
-            print("✅ Found openingDate for \(data["name"] as? String ?? "Unknown"): \(openingDate!) - cardState: \(cardState)")
-        } else {
-            print("❌ No openingDate found for \(data["name"] as? String ?? "Unknown"). Raw data: \(data["openingDate"] ?? "nil")")
         }
         
         return Listing(

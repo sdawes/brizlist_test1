@@ -22,22 +22,20 @@ struct SectionHeaderView: View {
             
             // Title and horizontal line
             VStack(spacing: 8) {
-                // Section title
+                // Section title - left aligned with card edges
                 HStack {
-                    Text(title)
-                        .font(.title2)
-                        .fontWeight(.bold)
+                    Text(title.lowercased())
+                        .font(.headline)
+                        .fontWeight(.medium)
                         .foregroundColor(.primary)
                     
                     Spacer()
                 }
-                .padding(.horizontal)
                 
-                // Horizontal line underneath
+                // Horizontal line underneath - full width aligned with cards
                 Rectangle()
                     .fill(Color.secondary.opacity(0.3))
                     .frame(height: 1)
-                    .padding(.horizontal)
             }
             
             // Bottom spacing before section content
@@ -47,11 +45,4 @@ struct SectionHeaderView: View {
     }
 }
 
-#Preview {
-    VStack {
-        SectionHeaderView(title: "FEATURED")
-        SectionHeaderView(title: "NEW")
-        SectionHeaderView(title: "COMING SOON")
-    }
-}
 

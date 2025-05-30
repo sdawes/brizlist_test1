@@ -60,6 +60,10 @@ struct ListingsScrollView: View {
                 }
                 
                 // Regular listing flow
+                if !viewModel.getRegularListings().isEmpty {
+                    SectionHeaderView(title: "ALL LISTINGS")
+                }
+                
                 LazyVStack(spacing: 16) {
                     // All remaining listings in a single flow, sorted alphabetically
                     ForEach(viewModel.getRegularListings()) { listing in
