@@ -18,6 +18,7 @@ struct Listing: Identifiable, Codable {
     var longDescription: String  // New field for detailed description
     var location: String
     var imageUrl: String?
+    var additionalImages: [String]  // New field for carousel images
     var cardState: String  // New field that replaces isFeatured and isNew
     var openingDate: Date?  // New field for coming soon listings
     
@@ -41,7 +42,7 @@ struct Listing: Identifiable, Codable {
     }
     
     // Updated initializer with consistent required/optional parameters
-    init(id: String? = nil, name: String, tags1: [String] = [], tags2: [String] = [], tags3: [String] = [], shortDescription: String, longDescription: String = "", location: String, imageUrl: String? = nil, cardState: String = "default", openingDate: Date? = nil) {
+    init(id: String? = nil, name: String, tags1: [String] = [], tags2: [String] = [], tags3: [String] = [], shortDescription: String, longDescription: String = "", location: String, imageUrl: String? = nil, additionalImages: [String] = [], cardState: String = "default", openingDate: Date? = nil) {
         self.id = id
         self.name = name
         self.tags1 = tags1
@@ -51,6 +52,7 @@ struct Listing: Identifiable, Codable {
         self.longDescription = longDescription
         self.location = location
         self.imageUrl = imageUrl
+        self.additionalImages = additionalImages
         self.cardState = cardState
         self.openingDate = openingDate
     }

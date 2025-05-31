@@ -51,6 +51,7 @@ struct ListingDetailView: View {
     let listing: Listing
     @Environment(\.dismiss) var dismiss
     @State private var tagsHeight: CGFloat = 0
+    @State private var currentImageIndex: Int = 0
     
     // MARK: - Pull Quote Parsing
     
@@ -208,12 +209,37 @@ struct ListingDetailView: View {
         }
     }
     
+    // MARK: - Image Carousel
+    
+    /// Get all images for the carousel (main image + additional images)
+    private var allImages: [String] {
+        var images: [String] = []
+        
+        // Add main image first
+        if let mainImage = listing.imageUrl {
+            images.append(mainImage)
+        }
+        
+        // Add additional images
+        images.append(contentsOf: listing.additionalImages)
+        
+        return images
+    }
+    
+    /// Check if we should show carousel (more than one image)
+    private var shouldShowCarousel: Bool {
+        return allImages.count > 1
+    }
+    
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     // Hero image at the top - contained within safe area
-                    if let imageUrl = listing.imageUrl {
+                    if shouldShowCarousel {
+                        CarouselView(images: allImages, currentIndex: $currentImageIndex)
+                            .frame(maxWidth: UIScreen.main.bounds.width, maxHeight: 280)
+                    } else if let imageUrl = listing.imageUrl {
                         FirebaseStorageImage(urlString: imageUrl)
                             .aspectRatio(4/3, contentMode: .fill)
                             .frame(maxWidth: UIScreen.main.bounds.width)
@@ -328,6 +354,45 @@ struct ListingDetailView: View {
                             )
                     }
                 }
+            }
+        }
+    }
+}
+
+// MARK: - Carousel View Component
+
+struct CarouselView: View {
+    let images: [String]
+    @Binding var currentIndex: Int
+    
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            // Image carousel
+            TabView(selection: $currentIndex) {
+                ForEach(Array(images.enumerated()), id: \.offset) { index, imageUrl in
+                    FirebaseStorageImage(urlString: imageUrl)
+                        .aspectRatio(4/3, contentMode: .fill)
+                        .frame(maxWidth: UIScreen.main.bounds.width)
+                        .frame(height: 280)
+                        .clipped()
+                        .tag(index)
+                }
+            }
+            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+            .frame(height: 280)
+            
+            // Custom page indicators
+            if images.count > 1 {
+                HStack(spacing: 8) {
+                    ForEach(0..<images.count, id: \.self) { index in
+                        Circle()
+                            .fill(index == currentIndex ? Color.white : Color.white.opacity(0.5))
+                            .frame(width: 8, height: 8)
+                            .scaleEffect(index == currentIndex ? 1.2 : 1.0)
+                            .animation(.easeInOut(duration: 0.2), value: currentIndex)
+                    }
+                }
+                .padding(.bottom, 16)
             }
         }
     }
