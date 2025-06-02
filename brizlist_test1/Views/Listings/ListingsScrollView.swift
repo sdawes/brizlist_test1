@@ -33,6 +33,9 @@ struct ListingsScrollView: View {
                     .padding(.bottom, 8)
                 }
                 
+                // Curated Lists Section
+                CuratedListsContainerView()
+                
                 // NEW listings (moved before COMING SOON)
                 if !viewModel.getNewListings().isEmpty {
                     SectionHeaderView(title: "NEW")
@@ -290,5 +293,13 @@ struct ListingsScrollView: View {
         }
         .coordinateSpace(name: "refresh")
     }
+}
+
+#Preview {
+    ListingsScrollView(
+        viewModel: ListingsViewModel(),
+        onFilterTap: {},
+        sizeClass: .compact
+    )
 }
 
