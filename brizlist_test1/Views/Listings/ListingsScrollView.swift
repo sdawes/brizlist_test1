@@ -23,11 +23,13 @@ struct ListingsScrollView: View {
             }
             
             VStack(spacing: 16) {
-                // Curated Lists Section
-                CuratedListsContainerView()
-                    .id(curatedListsRefreshId)
+                // Curated Lists Section - only show when no filters are active
+                if !viewModel.hasTagFilters {
+                    CuratedListsContainerView()
+                        .id(curatedListsRefreshId)
+                }
                 
-                // Regular listing flow - now includes ALL listings
+                // All listings section
                 if !viewModel.listings.isEmpty {
                     SectionHeaderView(title: "ALL LISTINGS")
                 }
@@ -248,15 +250,9 @@ struct ListingsScrollView: View {
                     }
                 }
                 
-                // Loading indicator and end of list message
+                // Loading indicator
                 if viewModel.isLoadingMore {
                     ProgressView()
-                        .padding()
-                }
-                
-                if !viewModel.hasMoreListings && !viewModel.listings.isEmpty {
-                    Text("No more listings to load")
-                        .foregroundColor(.secondary)
                         .padding()
                 }
             }

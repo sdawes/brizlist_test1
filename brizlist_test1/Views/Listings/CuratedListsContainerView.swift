@@ -72,9 +72,18 @@ struct CuratedListSectionView: View {
                 // Display curated listings
                 VStack(spacing: 12) {
                     ForEach(listings) { listing in
-                        // Use DefaultCardView for all curated listings regardless of their state
-                        // This creates a consistent look within curated sections
-                        DefaultCardView(listing: listing)
+                        // Use appropriate card view based on cardStyling
+                        Group {
+                            if listing.cardStyling == "large" {
+                                LargeCardView(listing: listing)
+                            } else if listing.cardStyling == "new" {
+                                NewCardView(listing: listing)
+                            } else if listing.cardStyling == "coming" {
+                                ComingSoonCardView(listing: listing)
+                            } else {
+                                DefaultCardView(listing: listing)
+                            }
+                        }
                     }
                 }
             }

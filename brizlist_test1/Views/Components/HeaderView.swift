@@ -64,9 +64,4 @@ struct HeaderView: View {
     }
 }
 
-#Preview {
-    HeaderView(
-        viewModel: ListingsViewModel(),
-        onFilterTap: {}
-    )
-}
+
