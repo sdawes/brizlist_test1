@@ -23,65 +23,36 @@ struct ListingsScrollView: View {
             }
             
             VStack(spacing: 16) {
-                // Featured listings at the top
-                if !viewModel.getFeaturedListings().isEmpty {
-                    SectionHeaderView(title: "FEATURED")
-                    
-                    VStack(spacing: 12) {
-                        ForEach(viewModel.getFeaturedListings()) { listing in
-                            FeaturedCardView(listing: listing)
-                                .id(listing.id)
-                        }
-                    }
-                    .padding(.bottom, 8)
-                }
-                
                 // Curated Lists Section
                 CuratedListsContainerView()
                     .id(curatedListsRefreshId)
                 
-                // NEW listings (moved before COMING SOON)
-                if !viewModel.getNewListings().isEmpty {
-                    SectionHeaderView(title: "NEW")
-                    
-                    VStack(spacing: 12) {
-                        ForEach(viewModel.getNewListings()) { listing in
-                            NewCardView(listing: listing)
-                                .id(listing.id)
-                        }
-                    }
-                    .padding(.bottom, 8)
-                }
-                
-                // COMING SOON listings
-                if !viewModel.getComingSoonListings().isEmpty {
-                    SectionHeaderView(title: "COMING SOON")
-                    
-                    VStack(spacing: 12) {
-                        ForEach(viewModel.getComingSoonListings()) { listing in
-                            ComingSoonCardView(listing: listing)
-                                .id(listing.id)
-                        }
-                    }
-                    .padding(.bottom, 8)
-                }
-                
-                // Regular listing flow
-                if !viewModel.getRegularListings().isEmpty {
+                // Regular listing flow - now includes ALL listings
+                if !viewModel.listings.isEmpty {
                     SectionHeaderView(title: "ALL LISTINGS")
                 }
                 
                 LazyVStack(spacing: 16) {
-                    // All remaining listings in a single flow, sorted alphabetically
-                    ForEach(viewModel.getRegularListings()) { listing in
-                        // Use DefaultCardView for all regular listings (not featured, coming, or new)
-                        DefaultCardView(listing: listing)
-                            .id(listing.id)
-                            .onAppear {
-                                if listing.id == viewModel.listings.last?.id {
-                                    viewModel.loadMoreListings()
-                                }
+                    // All listings in a single flow, sorted alphabetically
+                    ForEach(viewModel.listings) { listing in
+                        // Use appropriate card view based on cardStyling
+                        Group {
+                            if listing.cardStyling == "large" {
+                                LargeCardView(listing: listing)
+                            } else if listing.cardStyling == "new" {
+                                NewCardView(listing: listing)
+                            } else if listing.cardStyling == "coming" {
+                                ComingSoonCardView(listing: listing)
+                            } else {
+                                DefaultCardView(listing: listing)
                             }
+                        }
+                        .id(listing.id)
+                        .onAppear {
+                            if listing.id == viewModel.listings.last?.id {
+                                viewModel.loadMoreListings()
+                            }
+                        }
                     }
                     
                     // No results message when filtering results in no matches
@@ -109,18 +80,18 @@ struct ListingsScrollView: View {
                                         .font(.system(size: 14, weight: .medium))
                                         .foregroundColor(.secondary)
                                     
-                                    // FEATURED section
-                                    if !viewModel.selectedCardStates.isEmpty {
+                                                                          // CARD STYLING section
+                                    if !viewModel.selectedCardStyling.isEmpty {
                                         VStack(alignment: .leading, spacing: 6) {
                                             // Section title
-                                            Text("FEATURED")
+                                            Text("CARD STYLING")
                                                 .font(.system(size: 12, weight: .semibold))
                                                 .foregroundColor(.secondary)
                                                 .padding(.leading, 4)
                                             
                                             ScrollView(.horizontal, showsIndicators: false) {
                                                 HStack(spacing: 6) {
-                                                    ForEach(Array(viewModel.selectedCardStates), id: \.self) { cardState in
+                                                    ForEach(Array(viewModel.selectedCardStyling), id: \.self) { cardState in
                                                         Text(cardState.uppercased())
                                                             .font(.caption)
                                                             .fontWeight(.medium)
@@ -129,9 +100,9 @@ struct ListingsScrollView: View {
                                                             .padding(.horizontal, 8)
                                                             .background(
                                                                 Rectangle()
-                                                                    .fill(cardState == "new" ? Color.green.opacity(0.3) : 
-                                                                         cardState == "coming" ? Color(red: 1.0, green: 0.9, blue: 0.0).opacity(0.3) :
-                                                                         cardState == "featured" ? Color(red: 0.0, green: 0.4, blue: 0.9).opacity(0.3) :
+                                                                                                .fill(cardState == "new" ? Color.green.opacity(0.3) :
+                                 cardState == "coming" ? Color(red: 1.0, green: 0.9, blue: 0.0).opacity(0.3) :
+                                 cardState == "large" ? Color(red: 0.0, green: 0.4, blue: 0.9).opacity(0.3) :
                                                                          Color.blue.opacity(0.3))
                                                             )
                                                     }
@@ -306,4 +277,6 @@ struct ListingsScrollView: View {
         sizeClass: .compact
     )
 }
+
+
 

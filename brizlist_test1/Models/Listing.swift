@@ -19,7 +19,7 @@ struct Listing: Identifiable, Codable {
     var location: String
     var imageUrl: String?
     var additionalImages: [String]  // New field for carousel images
-    var cardState: String  // New field that replaces isFeatured and isNew
+    var cardStyling: String  // New field that replaces isFeatured and isNew
     var openingDate: Date?  // New field for coming soon listings
     
     // Helper to get a displayable URL
@@ -28,21 +28,26 @@ struct Listing: Identifiable, Codable {
         return URL(string: urlString)
     }
     
-    // Helper properties to check card state
+    // Helper properties to check card styling
     var isNew: Bool {
-        return cardState == "new"
+        return cardStyling == "new"
     }
     
-    var isFeatured: Bool {
-        return cardState == "featured"
+    var isLarge: Bool {
+        return cardStyling == "large"
     }
     
     var isComingSoon: Bool {
-        return cardState == "coming"
+        return cardStyling == "coming"
+    }
+    
+    // Computed property for backwards compatibility
+    var isFeatured: Bool {
+        return cardStyling == "large"
     }
     
     // Updated initializer with consistent required/optional parameters
-    init(id: String? = nil, name: String, tags1: [String] = [], tags2: [String] = [], tags3: [String] = [], shortDescription: String, longDescription: String = "", location: String, imageUrl: String? = nil, additionalImages: [String] = [], cardState: String = "default", openingDate: Date? = nil) {
+    init(id: String? = nil, name: String, tags1: [String] = [], tags2: [String] = [], tags3: [String] = [], shortDescription: String, longDescription: String = "", location: String, imageUrl: String? = nil, additionalImages: [String] = [], cardStyling: String = "default", openingDate: Date? = nil) {
         self.id = id
         self.name = name
         self.tags1 = tags1
@@ -53,7 +58,7 @@ struct Listing: Identifiable, Codable {
         self.location = location
         self.imageUrl = imageUrl
         self.additionalImages = additionalImages
-        self.cardState = cardState
+        self.cardStyling = cardStyling
         self.openingDate = openingDate
     }
 }

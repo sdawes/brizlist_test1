@@ -47,7 +47,10 @@ struct CuratedListSectionView: View {
     var body: some View {
         VStack(spacing: 12) {
             // Enhanced section header for curated lists
-            CuratedSectionHeaderView(title: curatedList.title)
+            CuratedSectionHeaderView(
+                title: curatedList.title,
+                description: curatedList.description
+            )
             
             if isLoading {
                 // Loading state
@@ -99,6 +102,7 @@ struct CuratedListSectionView: View {
 /// - Maintains same spacing structure as regular headers
 struct CuratedSectionHeaderView: View {
     let title: String
+    let description: String
     
     var body: some View {
         VStack(spacing: 0) {
@@ -128,6 +132,14 @@ struct CuratedSectionHeaderView: View {
                             .font(.title2)
                             .fontWeight(.bold)
                             .foregroundColor(.primary)
+                        
+                        // Description underneath the title
+                        if !description.isEmpty {
+                            Text(description)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.leading)
+                        }
                     }
                     
                     Spacer()

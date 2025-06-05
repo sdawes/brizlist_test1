@@ -13,7 +13,7 @@ import SwiftUI
 class ListingsViewModel: ObservableObject {
     // MARK: - Properties
     @Published private(set) var listings: [Listing] = []
-    @Published private(set) var featuredListings: [Listing] = []
+    @Published private(set) var largeListings: [Listing] = []
     @Published private(set) var isLoadingMore = false
     @Published private(set) var hasMoreListings = true
     @Published var errorMessage: String?
@@ -30,7 +30,7 @@ class ListingsViewModel: ObservableObject {
     @Published var selectedLocationTags: Set<String> = []
     
     // Selected card states for filtering
-    @Published var selectedCardStates: Set<String> = []
+    @Published var selectedCardStyling: Set<String> = []
     
     // Cache available tags for filter UI
     private var cachedTags1: [String] = []
@@ -62,7 +62,7 @@ class ListingsViewModel: ObservableObject {
         
         // Check if we have any tag filters selected
         if selectedTags1.isEmpty && selectedTags2.isEmpty && selectedTags3.isEmpty && 
-           selectedCardStates.isEmpty && selectedLocationTags.isEmpty {
+           selectedCardStyling.isEmpty && selectedLocationTags.isEmpty {
             // No filters, fetch all listings
             fetchAllListings()
         } else {
@@ -99,29 +99,29 @@ class ListingsViewModel: ObservableObject {
         fetchData(query: query, isInitialFetch: false)
     }
     
-    /// Get only featured listings for the carousel
-    public func getFeaturedListings() -> [Listing] {
-        return listings.filter { $0.cardState == "featured" }
+    /// Get only large listings for the carousel
+    public func getLargeListings() -> [Listing] {
+        return listings.filter { $0.cardStyling == "large" }
     }
     
-    /// Get only new listings for the carousel
+    /// Get only new listings
     public func getNewListings() -> [Listing] {
-        return listings.filter { $0.cardState == "new" }
+        return listings.filter { $0.cardStyling == "new" }
     }
     
-    /// Get only coming soon listings for the carousel
+    /// Get only coming soon listings
     public func getComingSoonListings() -> [Listing] {
-        return listings.filter { $0.cardState == "coming" }
+        return listings.filter { $0.cardStyling == "coming" }
     }
     
-    /// Get all regular listings for the main list (excluding featured, new, and coming soon)
+    /// Get all regular listings for the main list (excluding large, new, and coming soon)
     public func getRegularListings() -> [Listing] {
-        return listings.filter { $0.cardState != "featured" && $0.cardState != "new" && $0.cardState != "coming" }
+        return listings.filter { $0.cardStyling != "large" && $0.cardStyling != "new" && $0.cardStyling != "coming" }
     }
     
-    /// Get all non-featured listings for the main list
-    public func getNonFeaturedListings() -> [Listing] {
-        return listings.filter { $0.cardState != "featured" }
+    /// Get all non-large listings for the main list
+    public func getNonLargeListings() -> [Listing] {
+        return listings.filter { $0.cardStyling != "large" }
     }
     
     // MARK: - Tag Selection Methods
@@ -209,29 +209,29 @@ class ListingsViewModel: ObservableObject {
     
     /// Select a card state for filtering
     func selectCardState(_ cardState: String) {
-        selectedCardStates.insert(cardState)
+        selectedCardStyling.insert(cardState)
         // Don't fetch immediately - we'll do that when 'Apply' is pressed
     }
     
     /// Deselect a card state for filtering
     func deselectCardState(_ cardState: String) {
-        selectedCardStates.remove(cardState)
+        selectedCardStyling.remove(cardState)
         // Don't fetch immediately - we'll do that when 'Apply' is pressed
     }
     
     /// Toggle selection of a card state
     func toggleCardState(_ cardState: String) {
-        if selectedCardStates.contains(cardState) {
-            selectedCardStates.remove(cardState)
+        if selectedCardStyling.contains(cardState) {
+            selectedCardStyling.remove(cardState)
         } else {
-            selectedCardStates.insert(cardState)
+            selectedCardStyling.insert(cardState)
         }
         // Don't fetch immediately - we'll do that when 'Apply' is pressed
     }
     
     /// Clear all card state selections
     func clearCardStates() {
-        selectedCardStates.removeAll()
+        selectedCardStyling.removeAll()
     }
     
     /// Select a location tag for filtering
@@ -267,7 +267,7 @@ class ListingsViewModel: ObservableObject {
         selectedTags2.removeAll()
         selectedTags3.removeAll()
         selectedLocationTags.removeAll()
-        selectedCardStates.removeAll()
+        selectedCardStyling.removeAll()
         
         // Now fetch listings without filters
         fetchListings()
@@ -278,7 +278,7 @@ class ListingsViewModel: ObservableObject {
     /// Check if any tag filtering is active
     var hasTagFilters: Bool {
         return !selectedTags1.isEmpty || !selectedTags2.isEmpty || !selectedTags3.isEmpty || 
-               !selectedCardStates.isEmpty || !selectedLocationTags.isEmpty
+               !selectedCardStyling.isEmpty || !selectedLocationTags.isEmpty
     }
     
     /// Check if any filtering is active
@@ -302,7 +302,7 @@ class ListingsViewModel: ObservableObject {
             allTags1.formUnion(listing.tags1)
         }
         
-        for listing in featuredListings {
+        for listing in largeListings {
             allTags1.formUnion(listing.tags1)
         }
         
@@ -321,7 +321,7 @@ class ListingsViewModel: ObservableObject {
             allTags2.formUnion(listing.tags2)
         }
         
-        for listing in featuredListings {
+        for listing in largeListings {
             allTags2.formUnion(listing.tags2)
         }
         
@@ -337,7 +337,7 @@ class ListingsViewModel: ObservableObject {
             allTags3.formUnion(listing.tags3)
         }
         
-        for listing in featuredListings {
+        for listing in largeListings {
             allTags3.formUnion(listing.tags3)
         }
         
@@ -353,7 +353,7 @@ class ListingsViewModel: ObservableObject {
             allTags1.formUnion(listing.tags1)
         }
         
-        for listing in featuredListings {
+        for listing in largeListings {
             allTags1.formUnion(listing.tags1)
         }
         
@@ -392,7 +392,7 @@ class ListingsViewModel: ObservableObject {
             allLocations.insert(listing.location)
         }
         
-        for listing in featuredListings {
+        for listing in largeListings {
             allLocations.insert(listing.location)
         }
         
@@ -476,18 +476,18 @@ class ListingsViewModel: ObservableObject {
     /// Sort listings alphabetically by name
     private func sortListingsByName(_ listings: [Listing]) -> [Listing] {
         return listings.sorted { first, second in
-            // First prioritize by cardState: "featured" at the top, then "coming", then "new"
-            if first.cardState == "featured" && second.cardState != "featured" {
+            // First prioritize by cardStyling: "large" at the top, then "coming", then "new"
+            if first.cardStyling == "large" && second.cardStyling != "large" {
                 return true
-            } else if first.cardState != "featured" && second.cardState == "featured" {
+            } else if first.cardStyling != "large" && second.cardStyling == "large" {
                 return false
-            } else if first.cardState == "coming" && second.cardState != "coming" {
+            } else if first.cardStyling == "coming" && second.cardStyling != "coming" {
                 return true
-            } else if first.cardState != "coming" && second.cardState == "coming" {
+            } else if first.cardStyling != "coming" && second.cardStyling == "coming" {
                 return false
-            } else if first.cardState == "new" && second.cardState != "new" {
+            } else if first.cardStyling == "new" && second.cardStyling != "new" {
                 return true
-            } else if first.cardState != "new" && second.cardState == "new" {
+            } else if first.cardStyling != "new" && second.cardStyling == "new" {
                 return false
             }
             
@@ -513,7 +513,7 @@ class ListingsViewModel: ObservableObject {
                 DispatchQueue.main.async {
                     withAnimation(.easeOut(duration: 0.2)) {
                         self.listings = []
-                        self.featuredListings = []
+                        self.largeListings = []
                         
                         // Set the noResultsFromFiltering flag if we have filters but no results
                         self.noResultsFromFiltering = hasActiveFilters
@@ -595,14 +595,14 @@ class ListingsViewModel: ObservableObject {
         }
         
         // Process card state filtering
-        if !selectedCardStates.isEmpty {
+        if !selectedCardStyling.isEmpty {
             filteredDocuments = filteredDocuments.filter { document in
-                guard let cardState = document.data()["cardState"] as? String else {
+                guard let cardState = document.data()["cardStyling"] as? String else {
                     return false
                 }
                 
                 // Only include this document if its cardState is one of the selected ones
-                return selectedCardStates.contains(cardState)
+                return selectedCardStyling.contains(cardState)
             }
         }
         
@@ -625,7 +625,7 @@ class ListingsViewModel: ObservableObject {
                 DispatchQueue.main.async {
                     withAnimation(.easeOut(duration: 0.2)) {
                         self.listings = []
-                        self.featuredListings = []
+                        self.largeListings = []
                         
                         // Set the noResultsFromFiltering flag
                         self.noResultsFromFiltering = hasActiveFilters
@@ -651,14 +651,14 @@ class ListingsViewModel: ObservableObject {
         // Sort listings alphabetically (no longer prioritize new listings)
         let sortedListings = sortListingsByName(newListings)
         
-        // We still use separateFeaturedListings for UI reference but we won't sort by featured status
-        let (featured, _) = separateFeaturedListings(sortedListings)
+        // We still use separateLargeListings for UI reference but we won't sort by large status
+        let (large, _) = separateLargeListings(sortedListings)
         
         if isInitialFetch {
             // Apply results with animation for a smoother transition
             DispatchQueue.main.async {
                 withAnimation(.easeOut(duration: 0.2)) {
-                    self.featuredListings = featured
+                    self.largeListings = large
                     self.listings = sortedListings  // Use all sorted listings
                     
                     // Found results, so reset the no results flag
@@ -669,7 +669,7 @@ class ListingsViewModel: ObservableObject {
             // For pagination, just append to existing data
             DispatchQueue.main.async {
                 withAnimation(.easeOut(duration: 0.2)) {
-                    self.featuredListings.append(contentsOf: featured)
+                    self.largeListings.append(contentsOf: large)
                     self.listings.append(contentsOf: sortedListings)  // Append the new sorted listings
                     
                     // Re-sort the combined list if needed
@@ -705,7 +705,7 @@ class ListingsViewModel: ObservableObject {
             location: data["location"] as? String ?? "",
             imageUrl: data["imageUrl"] as? String,
             additionalImages: data["additionalImages"] as? [String] ?? [],
-            cardState: data["cardState"] as? String ?? "default",
+            cardStyling: data["cardStyling"] as? String ?? "default",
             openingDate: openingDate
         )
     }
@@ -718,20 +718,20 @@ class ListingsViewModel: ObservableObject {
         }
     }
     
-    /// Separate featured listings from regular listings
-    private func separateFeaturedListings(_ listings: [Listing]) -> (featured: [Listing], regular: [Listing]) {
-        var featured: [Listing] = []
+    /// Separate large listings from regular listings
+    private func separateLargeListings(_ listings: [Listing]) -> (large: [Listing], regular: [Listing]) {
+        var large: [Listing] = []
         var regular: [Listing] = []
         
         for listing in listings {
-            if listing.cardState == "featured" {
-                featured.append(listing)
+            if listing.cardStyling == "large" {
+                large.append(listing)
             } else {
                 regular.append(listing)
             }
         }
         
-        return (featured, regular)
+        return (large, regular)
     }
     
     /// Cache all available tags and filters for future use

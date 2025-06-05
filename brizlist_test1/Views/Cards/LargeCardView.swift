@@ -1,5 +1,5 @@
 //
-//  FeaturedCardView.swift
+//  LargeCardView.swift
 //  brizlist_test1
 //
 //  Created by Stephen Dawes on 27/05/2025.
@@ -7,20 +7,20 @@
 
 import SwiftUI
 
-/// A card view component for featured listings
-/// - Displays listings in standard format with side image
-/// - Uses light blue background to distinguish from default cards
+/// A card view component for large styled listings
+/// - Displays listings in large format with enhanced prominence
+/// - Uses distinctive styling to stand out from default cards
 /// - Includes tag wrapping system for all three tag types
 /// - Maintains consistent styling and navigation
-struct FeaturedCardView: View {
+struct LargeCardView: View {
     let listing: Listing
     @State private var showingDetailView = false
     @State private var tagsHeight: CGFloat = 0
     
     // MARK: - Card Dimensions
     
-    // Featured card height (320pt for prominent display)
-    private let featuredHeight: CGFloat = 320
+    // Large card height (320pt for prominent display)
+    private let largeHeight: CGFloat = 320
     
     // MARK: - Tag Layout System
     
@@ -99,70 +99,65 @@ struct FeaturedCardView: View {
     
     // MARK: - Card Design
     
-    // Featured card design with full-width top image
+    // Large card design with proper content positioning
     private func cardDesign() -> some View {
         VStack(spacing: 0) {
-            // Top section - image, name, description, location
-            VStack(spacing: 0) {
-                // Image at the top - covers full width
-                FirebaseStorageImage(urlString: listing.imageUrl)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: featuredHeight / 2)  // 50% of card height (160pt)
-                
-                // Content section below image
-                VStack(alignment: .leading, spacing: 4) {
-                    Spacer()
-                    .frame(height: 16) // Space above the name
-                    
-                    // Listing name
-                    HStack(spacing: 6) {
-                        Text(listing.name)
-                            .font(.title3)
-                            .fontWeight(.bold)
-                            .lineLimit(1)
-                        
-                        Spacer()
-                    }
-                    
-                    // Footer with location (now comes first)
-                    HStack(spacing: 4) {
-                        Image(systemName: "location.circle.fill")
-                            .font(.caption2)
-                        
-                        Text(listing.location.uppercased())
-                            .font(.caption2)
-                        
-                        Spacer()
-                    }
-                    .foregroundColor(.black)
-                    .padding(.top, 8)
-                    
-                    // Description section (now comes after location)
-                    if !listing.shortDescription.isEmpty {
-                        Text(listing.shortDescription)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.leading)
-                            .lineLimit(6) // Limit to 6 lines
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.top, 8)
-                    }
-                    
-                    Spacer(minLength: 8) // Ensure minimum spacing at bottom
+            // Image section at the top
+            FirebaseStorageImage(urlString: listing.imageUrl)
+                .frame(maxWidth: .infinity)
+                .frame(height: 180)  // Fixed height for image
+                .clipped()
+            
+            // Content section below image with white background
+            VStack(alignment: .leading, spacing: 0) {
+                // Listing name
+                HStack {
+                    Text(listing.name)
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .lineLimit(2)
+                        .foregroundColor(.primary)
                     
                     Spacer()
-                    .frame(height: 12) // Reduced space at bottom
                 }
-                .padding(.horizontal, 12)
+                
+                Spacer().frame(height: 12) // More spacing after name
+                
+                // Location with icon
+                HStack(spacing: 4) {
+                    Image(systemName: "location.circle.fill")
+                        .font(.caption2)
+                        .foregroundColor(.black)
+                    
+                    Text(listing.location.uppercased())
+                        .font(.caption2)
+                        .foregroundColor(.black)
+                    
+                    Spacer()
+                }
+                
+                Spacer().frame(height: 12) // More spacing after location
+                
+                // Description
+                if !listing.shortDescription.isEmpty {
+                    Text(listing.shortDescription)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(3)
+                        .multilineTextAlignment(.leading)
+                }
             }
-            .frame(minHeight: featuredHeight * 0.85) // 85% height, allows expansion
+            .padding(.horizontal, 16)
+            .padding(.vertical, 16)
+            .frame(minHeight: 120)  // Ensure adequate white space
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.white)
             
             // Bottom section - tags with wrapping
             tagsSection()
         }
-        .frame(minHeight: featuredHeight)
+        .frame(maxWidth: .infinity)
+        .background(Color.white)
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
     }

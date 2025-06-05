@@ -184,7 +184,7 @@ class CuratedListViewModel: ObservableObject {
             location: data["location"] as? String ?? "",
             imageUrl: data["imageUrl"] as? String,
             additionalImages: data["additionalImages"] as? [String] ?? [],
-            cardState: data["cardState"] as? String ?? "default",
+            cardStyling: data["cardStyling"] as? String ?? "default",
             openingDate: openingDate
         )
     }

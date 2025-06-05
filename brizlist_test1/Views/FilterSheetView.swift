@@ -19,10 +19,10 @@ struct FilterSheetView: View {
     @State private var selectedLocationTags: Set<String> = [] // Added for location filtering
     
     // Track selected card states for filtering
-    @State private var selectedCardStates: Set<String> = []
+    @State private var selectedCardStyling: Set<String> = []
     
-    // Available card states
-    private let availableCardStates = ["new", "featured", "coming"]
+    // Available card styling options
+    private let availableCardStyling = ["new", "large", "coming"]
     
     // Apply all selected filters
     private func applyFilters() {
@@ -54,7 +54,7 @@ struct FilterSheetView: View {
         }
         
         // Apply selected card states
-        for cardState in selectedCardStates {
+        for cardState in selectedCardStyling {
             viewModel.selectCardState(cardState)
         }
         
@@ -130,10 +130,10 @@ struct FilterSheetView: View {
     
     // Toggle selection of a card state (only changes local state, doesn't apply filter yet)
     private func toggleCardState(_ cardState: String) {
-        if selectedCardStates.contains(cardState) {
-            selectedCardStates.remove(cardState)
+        if selectedCardStyling.contains(cardState) {
+            selectedCardStyling.remove(cardState)
         } else {
-            selectedCardStates.insert(cardState)
+            selectedCardStyling.insert(cardState)
         }
     }
     
@@ -151,7 +151,7 @@ struct FilterSheetView: View {
         switch cardState.lowercased() {
         case "new":
             return Color.green.opacity(0.3)
-        case "featured":
+        case "large":
             return Color(red: 0.0, green: 0.4, blue: 0.9).opacity(0.3)
         case "coming":
             return Color(red: 1.0, green: 0.9, blue: 0.0).opacity(0.3)
@@ -191,7 +191,7 @@ struct FilterSheetView: View {
         selectedTags2.removeAll()
         selectedTags3.removeAll()
         selectedLocationTags.removeAll() // Clear location tags
-        selectedCardStates.removeAll()
+        selectedCardStyling.removeAll()
         
         // Reset all filters in the viewModel
         viewModel.clearAllFilters()
@@ -204,12 +204,12 @@ struct FilterSheetView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         // Removed instructional text
                         
-                        // Card state filter section (NEW and FEATURED)
+                        // Card state filter section (NEW and LARGE)
                         VStack(alignment: .leading, spacing: 6) {
                             // Removed top Divider
                             
-                            // Section title for Featured
-                            Text("FEATURED")
+                                            // Section title for Card Styling
+                Text("CARD STYLING")
                                 .font(.system(size: 13))
                                 .fontWeight(.semibold)
                                 .foregroundColor(.secondary)
@@ -220,13 +220,13 @@ struct FilterSheetView: View {
                                 .frame(height: 8)
                             
                             HStack(spacing: 6) {
-                                ForEach(availableCardStates, id: \.self) { cardState in
+                                ForEach(availableCardStyling, id: \.self) { cardState in
                                     Button(action: {
                                         toggleCardState(cardState)
                                     }) {
                                         HStack(spacing: 4) {
                                             // Checkmark that appears when selected
-                                            if selectedCardStates.contains(cardState) {
+                                            if selectedCardStyling.contains(cardState) {
                                                 Image(systemName: "checkmark")
                                                     .font(.system(size: 10, weight: .bold))
                                                     .foregroundColor(.black)
@@ -235,7 +235,7 @@ struct FilterSheetView: View {
                                             Text(cardState.uppercased())
                                                 .font(.system(size: 12))
                                                 // Use bold text when selected
-                                                .fontWeight(selectedCardStates.contains(cardState) ? .bold : .medium)
+                                                .fontWeight(selectedCardStyling.contains(cardState) ? .bold : .medium)
                                                 .foregroundColor(.black)
                                         }
                                         .padding(.vertical, 6)
@@ -245,9 +245,9 @@ struct FilterSheetView: View {
                                                 .fill(colorForCardState(cardState))
                                         )
                                         // Keep just the scale animation
-                                        .scaleEffect(selectedCardStates.contains(cardState) ? 1.03 : 1.0)
+                                        .scaleEffect(selectedCardStyling.contains(cardState) ? 1.03 : 1.0)
                                         // Add animation for smooth transition
-                                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedCardStates.contains(cardState))
+                                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedCardStyling.contains(cardState))
                                     }
                                     .buttonStyle(PlainButtonStyle())
                                 }
@@ -528,7 +528,7 @@ struct FilterSheetView: View {
                 selectedTags2 = Set(viewModel.selectedTags2)
                 selectedTags3 = Set(viewModel.selectedTags3)
                 selectedLocationTags = Set(viewModel.selectedLocationTags) // Initialize location tags
-                selectedCardStates = Set(viewModel.selectedCardStates)
+                selectedCardStyling = Set(viewModel.selectedCardStyling)
             }
             .animation(.default, value: selectedTags1)
         }
