@@ -12,11 +12,14 @@ struct ListingsScrollView: View {
     @ObservedObject var viewModel: ListingsViewModel
     var onFilterTap: () -> Void
     let sizeClass: UserInterfaceSizeClass?
+    @State private var curatedListsRefreshId = UUID()
     
     var body: some View {
         ScrollView {
             RefreshControl(coordinateSpace: .named("refresh")) {
                 viewModel.fetchListings()
+                // Trigger refresh for curated lists by changing the ID
+                curatedListsRefreshId = UUID()
             }
             
             VStack(spacing: 16) {
@@ -35,6 +38,7 @@ struct ListingsScrollView: View {
                 
                 // Curated Lists Section
                 CuratedListsContainerView()
+                    .id(curatedListsRefreshId)
                 
                 // NEW listings (moved before COMING SOON)
                 if !viewModel.getNewListings().isEmpty {

@@ -28,6 +28,12 @@ struct CuratedListsContainerView: View {
             .padding(.vertical, 24)
         }
     }
+    
+    /// Refresh curated lists data (called by parent when refresh is triggered)
+    func refresh() {
+        curatedListViewModel.clearCache()
+        curatedListViewModel.fetchCuratedLists()
+    }
 }
 
 // MARK: - Curated List Section Component
@@ -77,6 +83,7 @@ struct CuratedListSectionView: View {
     }
     
     private func fetchListings() {
+        isLoading = true
         curatedListViewModel.fetchListingsForCuratedList(curatedList) { fetchedListings in
             self.listings = fetchedListings
             self.isLoading = false
