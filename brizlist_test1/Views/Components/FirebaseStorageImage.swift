@@ -183,7 +183,9 @@ struct FirebaseStorageImage: View {
         } else if urlString.hasPrefix("https://firebasestorage.googleapis.com") {
             storageRef = storage.reference(forURL: urlString)
         } else {
-            storageRef = storage.reference().child(urlString)
+            // Add .jpeg extension if missing for simple paths
+            let pathWithExtension = urlString.contains(".") ? urlString : "\(urlString).jpeg"
+            storageRef = storage.reference().child(pathWithExtension)
         }
         
         // Get the data directly

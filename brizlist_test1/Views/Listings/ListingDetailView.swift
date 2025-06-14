@@ -364,13 +364,14 @@ struct ListingDetailView: View {
 struct CarouselView: View {
     let images: [String]
     @Binding var currentIndex: Int
+    @State private var tabViewId = UUID()
     
     var body: some View {
         ZStack(alignment: .bottom) {
             // Image carousel
             TabView(selection: $currentIndex) {
-                ForEach(Array(images.enumerated()), id: \.offset) { index, imageUrl in
-                    FirebaseStorageImage(urlString: imageUrl)
+                ForEach(0..<images.count, id: \.self) { index in
+                    FirebaseStorageImage(urlString: images[index])
                         .aspectRatio(4/3, contentMode: .fill)
                         .frame(maxWidth: UIScreen.main.bounds.width)
                         .frame(height: 280)
@@ -380,6 +381,17 @@ struct CarouselView: View {
             }
             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
             .frame(height: 280)
+            .id(tabViewId)
+            .onAppear {
+                // Reset the TabView by generating a new ID
+                tabViewId = UUID()
+                currentIndex = 0
+            }
+            .onChange(of: images.count) { _ in
+                // Regenerate TabView when images change
+                tabViewId = UUID()
+                currentIndex = 0
+            }
             
             // Custom page indicators
             if images.count > 1 {
